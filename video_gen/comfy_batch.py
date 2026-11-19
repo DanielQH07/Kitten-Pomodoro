@@ -138,8 +138,90 @@ def h3_workflow(cfg, clip, start_img, end_img, seed, save_prefix):
     }
 
 
-BUILDERS = {"wan": wan_workflow, "h3": h3_workflow}
+def h3_prompt(cfg, clip):
+    """Prompt có cấu trúc cho MiniMax H3: subject_definitions / summary / retention_analysis / detailed_description
+    (cùng định dạng với notebook mẫu và template chính thức của ComfyUI), mô tả theo dòng thời gian."""
+    g, refs = cfg["global"], cfg["refs"]
+    hp = g["h3_prompt"]
+    frames = clip.get("h3_frames", 107)
+    dur = frames / 24.0
+    start_pose = refs[clip["start"]].get("pose", "in its starting pose")
+    end_pose = refs[clip["end"]].get("pose", "in its final pose")
+    last = hp["last_same"] if clip["end"] == clip["start"] else hp["last"].replace("{end_pose}", end_pose)
+    parts = [
+        "subject_definitions:",
+        hp["subject"].replace("{character}", g["character"]),
+        hp["first"].replace("{start_pose}", start_pose),
+        last,
+        "",
+        "summary:",
+        f"[First-last-frame motion generation — {clip['id']}] " + clip.get("summary", clip["prompt"]),
+        "",
+        "retention_analysis:",
+        hp["retention"],
+        "",
+        "detailed_description:",
+        f"[Shot 1 — 0.00-{dur:.2f} s] One uninterrupted static shot. The camera and framing are completely locked.",
+        "",
+    ]
+    for a, b, text in clip.get("timeline", [[0, dur, clip["prompt"]]]):
+        parts.append(f"{a:.2f}-{b:.2f} s — {text}")
+    parts += ["", hp["audio"]]
+    return "\n".join(parts)
+
+
+def h3local_workflow(cfg, clip, start_img, end_img, seed, save_prefix):
+    """MiniMax H3 chạy cục bộ (Comfy-Org/MiniMax-H3), first+last frame. Theo template chính thức video_minimax_h3_i2v:
+    UNETLoader + CLIPLoader(minimax) + VAELoader -> MiniMaxH3ImageToVideo -> BasicGuider/SamplerCustomAdvanced -> VAEDecode."""
+    b = cfg["backends"]["h3local"]
+    width, height = b["resolution"]
+    length = clip.get("h3_frames", 107)
+    if (length - 5) % 17 != 0:
+        raise ValueError(f"{clip['id']}: h3_frames phải có dạng 17k+5 (56, 73, 90, 107, 124...), đang là {length}")
+    turbo = b.get("quality", "full") == "turbo"
+    steps = b["steps_turbo"] if turbo else b["steps_full"]
+    unet = b["unet"] if b.get("variant", "int8") == "int8" else b["unet_fp8"]
+
+    wf = {
+        "1": node("UNETLoader", unet_name=unet, weight_dtype="default"),
+        "2": node("CLIPLoader", clip_name=b["clip"], type="minimax", device="default"),
+        "3": node("VAELoader", vae_name=b["vae"]),
+        "4": node("LoadImage", image=start_img),
+        "5": node("LoadImage", image=end_img),
+    }
+    model_src = ["1", 0]
+    if turbo:
+        wf["6"] = node("LoraLoaderModelOnly", model=["1", 0], lora_name=b["lora_turbo"], strength_model=1.0)
+        model_src = ["6", 0]
+    wf["7"] = node("MiniMaxH3ImageToVideo", clip=["2", 0], vae=["3", 0], prompt=h3_prompt(cfg, clip),
+                   width=width, height=height, length=length, first_frame=["4", 0], last_frame=["5", 0])
+    positive, latent = ["7", 0], ["7", 1]
+    # keyframe trung gian tuỳ chọn: clip["keyframes"] = [{"ref": "crouch", "at": 1.0}, ...] (giây)
+    for i, kf in enumerate(clip.get("_keyframes", [])):
+        img_id, guide_id = str(30 + i), str(40 + i)
+        wf[img_id] = node("LoadImage", image=kf["image"])
+        wf[guide_id] = node("MiniMaxH3AddGuide", positive=positive, vae=["3", 0], latent=latent,
+                            image=[img_id, 0], frame_idx=int(round(kf["at"] * 24)))
+        positive = [guide_id, 0]
+    wf["8"] = node("BasicGuider", model=model_src, conditioning=positive)
+    wf["9"] = node("KSamplerSelect", sampler_name=b["sampler"])
+    wf["10"] = node("BasicScheduler", model=model_src, scheduler=b["scheduler"], steps=steps, denoise=1.0)
+    wf["11"] = node("RandomNoise", noise_seed=seed)
+    wf["12"] = node("SamplerCustomAdvanced", noise=["11", 0], guider=["8", 0], sampler=["9", 0],
+                    sigmas=["10", 0], latent_image=latent)
+    wf["13"] = node("VAEDecode", samples=["12", 0], vae=["3", 0])
+    wf["14"] = node("SaveImage", images=["13", 0], filename_prefix=save_prefix)
+    return wf
+
+
+def backend_fps(cfg, backend):
+    return cfg["backends"].get(backend, {}).get("fps") or cfg["global"]["fps"]
+
+
+BUILDERS = {"wan": wan_workflow, "h3": h3_workflow, "h3local": h3local_workflow}
 REQUIRED_NODES = {
+    "h3local": ["UNETLoader", "CLIPLoader", "VAELoader", "LoadImage", "MiniMaxH3ImageToVideo", "BasicGuider",
+                "KSamplerSelect", "BasicScheduler", "RandomNoise", "SamplerCustomAdvanced", "VAEDecode", "SaveImage"],
     "wan": ["UNETLoader", "LoraLoaderModelOnly", "ModelSamplingSD3", "CLIPLoader", "VAELoader", "CLIPTextEncode",
             "LoadImage", "WanFirstLastFrameToVideo", "KSamplerAdvanced", "VAEDecode", "SaveImage"],
     "h3": ["LoadImage", "MinimaxHailuo03FirstLastFrameNode", "SaveVideo"],
@@ -248,6 +330,9 @@ def run_clip(cfg, clip, backend, seed, comfy, args):
     start = comfy.upload_image(os.path.join(HERE, refs[clip["start"]]["file"]))
     end = start if clip["end"] == clip["start"] else comfy.upload_image(os.path.join(HERE, refs[clip["end"]]["file"]))
     prefix = f"kitten/{clip['id']}_{backend}_s{seed}"
+    if clip.get("keyframes"):  # keyframe trung gian (chỉ backend h3local)
+        clip = dict(clip, _keyframes=[{"image": comfy.upload_image(os.path.join(HERE, refs[k["ref"]]["file"])), "at": k["at"]}
+                                      for k in clip["keyframes"]])
     wf = BUILDERS[backend](cfg, clip, start, end, seed, prefix)
     pid = comfy.queue(wf, use_api_key=(backend == "h3"))
     print(f"    prompt_id {pid}", flush=True)
@@ -272,7 +357,7 @@ def run_clip(cfg, clip, backend, seed, comfy, args):
                 os.makedirs(fdir, exist_ok=True)
                 for p in files:
                     shutil.copy(p, fdir)
-            frames_to_mp4(files, cfg["global"]["fps"], dest)
+            frames_to_mp4(files, backend_fps(cfg, backend), dest)
     return f"xong -> {dest}"
 
 
@@ -281,7 +366,10 @@ def main():
     ap.add_argument("--config", default=os.path.join(HERE, "clips.json"))
     ap.add_argument("--server", default="http://127.0.0.1:8188")
     ap.add_argument("--out", default=os.path.join(HERE, "output"))
-    ap.add_argument("--backend", choices=list(BUILDERS), default="wan")
+    ap.add_argument("--backend", choices=list(BUILDERS), default="h3local",
+                    help="h3local = MiniMax H3 chạy cục bộ trên A100 (mặc định) | wan = Wan 2.2 | h3 = MiniMax H3 qua API")
+    ap.add_argument("--quality", choices=["full", "turbo"], help="ghi đè backends.h3local.quality")
+    ap.add_argument("--variant", choices=["int8", "fp8"], help="ghi đè backends.h3local.variant (A100: int8)")
     ap.add_argument("--only", help="id clip, cách nhau dấu phẩy")
     ap.add_argument("--priority", type=int, help="chỉ chạy clip có priority <= N")
     ap.add_argument("--variants", type=int, default=1, help="số seed khác nhau cho mỗi clip")
@@ -298,14 +386,21 @@ def main():
             stream.reconfigure(encoding="utf-8")
 
     cfg = load_cfg(args.config)
+    if args.quality:
+        cfg["backends"]["h3local"]["quality"] = args.quality
+    if args.variant:
+        cfg["backends"]["h3local"]["variant"] = args.variant
     clips = select_clips(cfg, args)
 
     if args.list:
-        print(f"{'id':16} pri  {'đầu':12} {'cuối':12} khung  dùng cho")
+        local = args.backend == "h3local"
+        print(f"{'id':16} pri  {'đầu':12} {'cuối':12} khung  {'giây':>5}  dùng cho   (khung/giây theo backend {args.backend})")
         for c in clips:
             miss = [k for k in (c["start"], c["end"]) if not os.path.exists(os.path.join(HERE, cfg["refs"][k]["file"]))]
             flag = "  [thiếu ảnh: " + ",".join(sorted(set(miss))) + "]" if miss else ""
-            print(f"{c['id']:16} {c.get('priority', '-')!s:4} {c['start']:12} {c['end']:12} {c.get('frames', 81):4}   {c.get('used_for', '')}{flag}")
+            frames = c.get("h3_frames", 107) if local else c.get("frames", 81)
+            secs = frames / backend_fps(cfg, args.backend)
+            print(f"{c['id']:16} {c.get('priority', '-')!s:4} {c['start']:12} {c['end']:12} {frames:4}  {secs:5.2f}  {c.get('used_for', '')}{flag}")
         return
 
     if args.dry_run:

@@ -7,8 +7,9 @@ Bộ công cụ tạo hàng loạt clip cho mèo, dùng **khung đầu + khung c
 | `clips.json` | Toàn bộ cấu hình: prompt từng clip, ảnh đầu/cuối, độ phân giải, model, backend |
 | `refs/` | Ảnh tham chiếu (tư thế trung tâm) nền xanh |
 | `comfy_batch.py` | Chạy hàng loạt qua API của ComfyUI, tải kết quả về mp4 |
-| `colab_comfyui.ipynb` | Notebook Colab L4: cài ComfyUI, tải model, chạy batch, lưu vào Drive |
-| `make_notebook.js` | Sinh lại notebook (`node video_gen/make_notebook.js`) |
+| `colab_h3_a100.ipynb` | **Khuyên dùng.** Notebook Colab A100: MiniMax H3 chạy cục bộ trong ComfyUI, 1344×768, 24fps |
+| `colab_comfyui.ipynb` | Dự phòng: Wan 2.2 trên Colab L4 |
+| `make_notebook_h3.js`, `make_notebook.js` | Sinh lại 2 notebook (`node video_gen/make_notebook_h3.js`) |
 
 ## 1. Ý tưởng: 3 tư thế trung tâm
 
@@ -19,15 +20,30 @@ Mọi clip bắt đầu và kết thúc ở một trong các tư thế sau, nên
 | STAND (đứng nhìn ngang, quay phải) | `refs/stand_right.png` | ✅ |
 | SIT (ngồi nhìn thẳng) | `refs/sit_front.png` | ✅ |
 | LIE (nằm nghiêng ngủ) | `refs/lie_side.png` | ✅ |
-| HELD (bị nhấc lên, thân thõng) | `refs/held.png` | ❌ cần tạo |
-| BELLY (nằm ngửa) | `refs/belly_up.png` | ❌ cần tạo |
+| HELD (bị nhấc lên, thân thõng) | `refs/held.png` | ✅ (đã xoá dấu ✦ Gemini) |
+| BELLY (nằm ngửa) | `refs/belly_up.png` | ✅ (đã xoá dấu ✦ Gemini) |
 
 Tạo 2 ảnh còn thiếu: đưa `stand_right.png` (cho HELD) và `lie_side.png` (cho BELLY) vào **Gemini (Nano Banana)** hoặc công cụ sửa ảnh trong ComfyUI, dán prompt ở `clips.json → refs.held.generate.prompt` và `refs.belly_up.generate.prompt`. Chọn ảnh **giống bé mèo nhất**, giữ nguyên nền xanh và cỡ ảnh 1280×720, lưu vào `refs/`.
 Chưa có 2 ảnh này thì các clip dùng chúng (`held_dangle`, `land`, `hiss_squirm`, `belly_*`) tự bị bỏ qua, các clip còn lại chạy bình thường.
 
 Xem danh sách và clip nào còn thiếu ảnh: `python video_gen/comfy_batch.py --list`
 
-## 2. Chạy trên Colab (khuyên dùng)
+## 2. Chạy MiniMax H3 cục bộ trên A100 (khuyên dùng)
+
+Lý do chọn H3 thay Wan: H3 bám prompt tốt hơn, chạy 24fps ở 1344×768 (nét hơn 848×480 của Wan) và nhận prompt theo dòng thời gian. Lần chạy Wan đầu tiên có lỗi: mèo đi bộ thay vì phi, không chổng mông, bàn tay người xuất hiện dù đã cấm, mèo đi khỏi khung. Nguyên nhân chính là LoRA 4 bước chạy cfg=1 nên prompt phủ định không có tác dụng.
+
+1. Đưa `video_gen/` lên GitHub (hoặc Drive: `MyDrive/kitten_video_gen`).
+2. Mở `colab_h3_a100.ipynb`, chọn **A100**, chạy lần lượt từng ô. Model lưu ở Drive (`ComfyUI_H3_models`) nên phiên sau không phải tải lại.
+3. Chạy thử `pounce`, xem ổn rồi chạy `--priority 1`.
+4. Kết quả: `MyDrive/kitten_video_h3/<id>/<id>_h3local_s<seed>.mp4`.
+
+**Prompt có cấu trúc** (cùng định dạng notebook mẫu và template chính thức của ComfyUI): `subject_definitions` (mèo; `<Picture 1>` = khung đầu, `<Picture 2>` = khung cuối) → `summary` → `retention_analysis` (khoá nền xanh, camera, vị trí, cỡ mèo, cấm tay/người) → `detailed_description` theo từng giây. Phần chung nằm ở `clips.json → global.h3_prompt`; timeline riêng của mỗi clip ở `clips[].timeline`. Mỗi clip có `h3_frames` dạng **17k+5** (56, 73, 90, 107, 124 = 2,3 / 3,0 / 3,75 / 4,5 / 5,2 giây ở 24fps). Timeline phải kết thúc trước giây cuối của clip.
+
+Tuỳ chọn: `--quality turbo` (LoRA 8-step, 6 bước, nhanh hơn nhiều), `--variant fp8` nếu int8 lỗi. Muốn ép tư thế trung gian cho một clip: thêm `"keyframes": [{"ref": "ten_anh_trong_refs", "at": 1.0}]` (giây) để runner nối node `MiniMaxH3AddGuide`.
+
+Clip lặp (`run`) dùng `sprite_start` và `sprite_sec` để chỉ cắt đoạn giữa (vòng chạy) khi build sprite.
+
+## 2b. Phương án dự phòng: Wan 2.2 trên Colab L4
 
 1. Đưa thư mục `video_gen/` lên GitHub (hoặc Drive: `MyDrive/kitten_video_gen`).
 2. Mở `colab_comfyui.ipynb` trong Colab, chọn **GPU L4**, chạy lần lượt từng ô.
@@ -37,7 +53,7 @@ Xem danh sách và clip nào còn thiếu ảnh: `python video_gen/comfy_batch.p
 Mặc định: Wan 2.2 14B fp8, bản LoRA lightx2v 4 bước, 848×480, 81 khung hình 16fps (≈5 giây). Mình chưa đo được thời gian thực trên L4; bạn đo ở clip đầu tiên rồi nhân lên để biết cả loạt mất bao lâu.
 Muốn chất lượng cao hơn: `backends.wan.quality = "full"` (20 bước, chậm hơn nhiều lần). 720p trên L4 không khuyến khích.
 
-## 3. MiniMax H3 qua ComfyUI (tuỳ chọn)
+## 3. MiniMax H3 qua API node (tuỳ chọn, tính phí)
 
 - ComfyUI có sẵn node **MiniMax H3 First-Last-Frame to Video** (hỗ trợ khung đầu + khung cuối).
 - Cần `COMFY_API_KEY` (platform.comfy.org) và credit. Mặc định model `MiniMax H3 Max Turbo` 768P. Các lựa chọn: `MiniMax H3` (768P/2K), `MiniMax H3 Max`, `MiniMax H3 Max Turbo` (480P/768P).

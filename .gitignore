@@ -27,3 +27,6 @@ desktop/www/icons/
 video_gen/output/
 video_gen/__pycache__/
 video_gen/refs/_orig/
+
+# Thư mục tạm của dự án khác (notebook CCTV), không đưa lên git
+tmp/

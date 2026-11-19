@@ -3,7 +3,7 @@
 set -e
 cd "$(dirname "$0")/.."
 OUT=extension/sprites
-SCALE=0.5; FPS=10
+SCALE=0.5
 # tô logo Gemini (góc phải dưới, ~1160,600) bằng màu nền rồi mới tách nền
 LOGO="drawbox=x=1135:y=575:w=50:h=50:color=0x228B51:t=fill"
 CROP="crop=1180:610:50:100"
@@ -12,6 +12,7 @@ KEY="format=rgba,geq=r='r(X,Y)':g='min(g(X,Y),max(r(X,Y),b(X,Y))+4)':b='b(X,Y)':
 
 make() { # name input start duration
   local name=$1 in=$2 ss=$3 dur=$4 tmp; tmp=$(mktemp -d)
+  local FPS; FPS=$(node tools/sprite_fps.js "$(ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate -of csv=p=0 "$in")")  # fps đều nhịp theo nguồn (xem tools/sprite_fps.js)
   ffmpeg -v error -y -ss "$ss" -t "$dur" -i "$in" \
     -vf "fps=$FPS,$LOGO,$CROP,scale=iw*$SCALE:ih*$SCALE,$KEY" "$tmp/f%03d.png"
   local n; n=$(ls "$tmp" | wc -l)
@@ -32,8 +33,8 @@ make walk_sit Video/cat_walk_sit_meme.mp4  0 9.5
 [ -f Video/cat_standup.mp4 ] && make standup Video/cat_standup.mp4 0 6.5
 [ -f Video/cat_sleep.mp4 ]   && make sleep   Video/cat_sleep.mp4   0 8
 # Clip mới tạo bằng ComfyUI (video_gen/clips.json): build khi có Video/<id>.mp4 (đổi tên bản đẹp nhất thành <id>.mp4)
-while read -r id sec; do
+while read -r id st sec; do
   f="Video/$id.mp4"; [ -f "$f" ] || f="Video/cat_$id.mp4"   # chấp nhận cả cat_<id>.mp4
-  [ -f "$f" ] && make "$id" "$f" 0 "$sec"
-done < <(node -e 'for (const c of require("./video_gen/clips.json").clips) console.log(c.id, c.sprite_sec || 4)')
+  [ -f "$f" ] && make "$id" "$f" "$st" "$sec"
+done < <(node -e 'for (const c of require("./video_gen/clips.json").clips) console.log(c.id, c.sprite_start || 0, c.sprite_sec || 4)')
 true

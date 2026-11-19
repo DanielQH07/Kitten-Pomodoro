@@ -3,7 +3,7 @@
 (() => {
   if (window.top !== window || document.getElementById('kitten-pomodoro-host')) return;
 
-  const WALK_FRAMES_IN_SIT_CLIP = 38;   // sau khung này mèo thôi bước và ngồi
+  const WALK_SECONDS_IN_SIT_CLIP = 3.8;   // sau giây này mèo thôi bước và ngồi (tính theo giây để không phụ thuộc fps sprite)
   const SMALL = Math.min(innerWidth, innerHeight) < 600;       // điện thoại
   const ROAM_SCALE = SMALL ? 0.45 : 0.67, SPEED = 80; // px/s ở scale ROAM (sprite rộng 590px)
   // lúc chặn màn hình mèo phóng to gần phủ kín màn hình
@@ -204,7 +204,7 @@
     const bw = box.x1 - box.x0, bh = box.y1 - box.y0;
     if (lx < box.x0 || lx > box.x1 || ly < box.y0 || ly > box.y1) return 'body';
     const front = cat.flip ? lx < box.x0 + 0.32 * bw : lx > box.x1 - 0.32 * bw;    // đầu ở phía mèo đang hướng tới
-    if (cat.clip === 'walk_sit' && cat.frame >= WALK_FRAMES_IN_SIT_CLIP)             // ngồi nhìn thẳng: đầu ở phía trên giữa
+    if (cat.clip === 'walk_sit' && cat.t >= WALK_SECONDS_IN_SIT_CLIP)             // ngồi nhìn thẳng: đầu ở phía trên giữa
       return ly < box.y0 + 0.45 * bh && Math.abs(lx - (box.x0 + box.x1) / 2) < 0.3 * bw ? 'head' : 'body';
     if (cat.clip === 'sleep') return (cat.flip ? lx < box.x0 + 0.38 * bw : lx > box.x1 - 0.38 * bw) ? 'head' : 'body';
     return front && ly < box.y0 + 0.62 * bh ? 'head' : 'body';
@@ -212,7 +212,7 @@
 
   function pet(x, y) {
     hearts(x, y); purrBurst(3);
-    const name = cat.mode === 'sit' && cat.frame >= WALK_FRAMES_IN_SIT_CLIP && clips.pet_sit ? 'pet_sit' : 'pet';
+    const name = cat.mode === 'sit' && cat.t >= WALK_SECONDS_IN_SIT_CLIP && clips.pet_sit ? 'pet_sit' : 'pet';
     if (!clips[name] || cat.mode === 'pet' || cat.mode === 'scratch' || cat.mode === 'jump') return;
     cat.mode = 'pet'; cat.clip = name; cat.t = 0;
   }
@@ -305,7 +305,7 @@
       }
     } else if (cat.mode === 'sit') { // clip ngồi: đi vài bước rồi ngồi xuống
       const f = cat.t * c.fps;
-      if (f < WALK_FRAMES_IN_SIT_CLIP) moveAlong(speed * dt, W, vw, vh);
+      if (cat.t < WALK_SECONDS_IN_SIT_CLIP) moveAlong(speed * dt, W, vw, vh);
       if (f >= c.frames - 1 && !cat.holdUntil) { cat.holdUntil = cat.t + (blocking ? 1e9 : 5 + Math.random() * 7); cat.holdStart = cat.t; }
       // giờ nghỉ dài: ngồi một lúc rồi ngủ gừ gừ
       if (blocking && cat.holdStart && cat.t - cat.holdStart > 12 && enterSleep(1e9)) { /* ngủ */ }
