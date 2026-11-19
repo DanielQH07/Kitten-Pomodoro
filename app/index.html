@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#fff0e6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Kitten">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Kitten Pomodoro</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow-x:hidden;background:#fff0e6;color:#3b2f2f;font:16px system-ui,sans-serif;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+  main{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px 24px 120px;text-align:center}
+  h1{margin:0;font-size:20px}
+  #time{font-size:72px;font-weight:700;letter-spacing:2px;font-variant-numeric:tabular-nums}
+  #phase{color:#a07a6a;margin-top:-6px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+  button{padding:12px 20px;border:0;border-radius:14px;background:#f4a9a0;color:#3b2f2f;font:600 16px system-ui;cursor:pointer}
+  button.sec{background:#eadbd3}
+  label{display:flex;gap:8px;align-items:center;justify-content:center}
+  input[type=number]{width:60px;padding:6px;font-size:16px}
+  #hint{font-size:13px;color:#a07a6a;max-width:320px}
+</style>
+</head>
+<body>
+<main>
+  <h1>🐱 Kitten Pomodoro</h1>
+  <div id="time">--:--</div>
+  <div id="phase"></div>
+  <div class="row"><button id="start">Bắt đầu làm việc</button><button id="stop" class="sec">Dừng</button></div>
+  <button id="test" class="sec">Thử mèo chặn màn hình</button>
+  <div class="row">
+    <label>Làm <input id="workMin" type="number" min="1" max="120"> phút</label>
+    <label>Nghỉ <input id="breakMin" type="number" min="1" max="60"> phút</label>
+  </div>
+  <label>Âm lượng <input id="volume" type="range" min="0" max="1" step="0.05"></label>
+  <label><input id="catOn" type="checkbox"> Hiện mèo</label>
+  <div id="hint">Mèo đi quanh viền màn hình. Chạm vào mèo để nghe meo. Giữ màn hình mở khi đang đếm giờ.</div>
+</main>
+<script src="shim.js"></script>
+<script src="content.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>

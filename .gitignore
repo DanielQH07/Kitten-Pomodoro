@@ -1,0 +1,24 @@
+# Tài nguyên nặng / có thể vướng bản quyền: giữ trên máy, không đưa lên git
+Video/
+sounds/
+extension/sounds/
+images/
+
+# Build, gói cài đặt
+dist/
+node_modules/
+*.exe
+*.zip
+
+# Bản sao sinh tự động (tools/package.sh, desktop/sync.js) — nguồn thật nằm ở extension/
+app/content.js
+app/sprites/
+app/sounds/
+desktop/www/content.js
+desktop/www/popup.html
+desktop/www/popup.js
+desktop/www/sprites/
+desktop/www/sounds/
+desktop/www/icons/
+
+.claude/

@@ -1,0 +1,51 @@
+{
+  "manifest_version": 3,
+  "name": "Kitten Pomodoro",
+  "version": "0.1.0",
+  "description": "Một bé mèo trắng đi dạo trên trang web và bắt bạn nghỉ ngơi theo Pomodoro.",
+  "permissions": [
+    "storage",
+    "alarms",
+    "notifications"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Kitten Pomodoro",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "sprites/*",
+        "sounds/*"
+      ],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ]
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

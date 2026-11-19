@@ -1,0 +1,36 @@
+{
+  "name": "kitten-pomodoro-desktop",
+  "version": "0.2.0",
+  "description": "Mèo trắng đi quanh màn hình desktop và bắt bạn nghỉ ngơi theo Pomodoro.",
+  "main": "main.js",
+  "author": "Kitten Pomodoro",
+  "scripts": {
+    "sync": "node sync.js",
+    "start": "node sync.js && electron .",
+    "dist": "node sync.js && electron-builder --win portable nsis"
+  },
+  "build": {
+    "appId": "com.kittenpomodoro.desktop",
+    "productName": "Kitten Pomodoro",
+    "files": [
+      "main.js",
+      "preload.js",
+      "www/**/*",
+      "package.json"
+    ],
+    "win": {
+      "icon": "www/icons/icon256.png",
+      "target": [
+        "portable",
+        "nsis"
+      ]
+    },
+    "directories": {
+      "output": "../dist/desktop"
+    }
+  },
+  "devDependencies": {
+    "electron": "^45.4.1",
+    "electron-builder": "^26.18.0"
+  }
+}

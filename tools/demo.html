@@ -1,0 +1,18 @@
+<!doctype html><meta charset="utf-8"><title>Kitten Pomodoro demo</title>
+<body style="font:16px system-ui;padding:40px;background:#fff">
+<h1>Trang web đang làm việc</h1><p>Lorem ipsum dolor sit amet. Mèo đi dạo ở đáy trang.</p>
+<p>Thêm <code>?break</code> vào URL để xem mèo chặn màn hình. Mở bằng server tĩnh (xem README).</p>
+<script>
+// Giả lập chrome.* để chạy content.js ngoài extension
+const q = new URLSearchParams(location.search);
+const store = { phase: q.has('break') ? 'break' : 'idle', endsAt: Date.now() + 240000, catOn: true, volume: 0.5 };
+const ls = [];
+window.chrome = {
+  runtime: { id: 'shim', getURL: (p) => '/extension/' + p, sendMessage: (m) => { if (m.type === 'skip-break') { store.phase = 'work'; ls.forEach(f => f({ phase: { newValue: 'work' } })); } } },
+  storage: { local: { get: async () => ({ ...store }) }, onChanged: { addListener: (f) => ls.push(f) } },
+};
+</script>
+<pre id="log"></pre>
+<script>for (const e of ["error","unhandledrejection"]) addEventListener(e, (x) => { document.getElementById("log").textContent += e + ": " + (x.message || (x.reason && (x.reason.stack || x.reason))) + "
+"; });</script>
+<script src="/extension/content.js"></script>
