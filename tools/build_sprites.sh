@@ -31,4 +31,9 @@ make walk_sit Video/cat_walk_sit_meme.mp4  0 9.5
 [ -f Video/cat_turn.mp4 ]    && make turn    Video/cat_turn.mp4    0 4.2
 [ -f Video/cat_standup.mp4 ] && make standup Video/cat_standup.mp4 0 6.5
 [ -f Video/cat_sleep.mp4 ]   && make sleep   Video/cat_sleep.mp4   0 8
+# Clip mới tạo bằng ComfyUI (video_gen/clips.json): build khi có Video/<id>.mp4 (đổi tên bản đẹp nhất thành <id>.mp4)
+while read -r id sec; do
+  f="Video/$id.mp4"; [ -f "$f" ] || f="Video/cat_$id.mp4"   # chấp nhận cả cat_<id>.mp4
+  [ -f "$f" ] && make "$id" "$f" 0 "$sec"
+done < <(node -e 'for (const c of require("./video_gen/clips.json").clips) console.log(c.id, c.sprite_sec || 4)')
 true

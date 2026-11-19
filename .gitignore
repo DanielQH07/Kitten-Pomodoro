@@ -22,3 +22,8 @@ desktop/www/sounds/
 desktop/www/icons/
 
 .claude/
+
+# Kết quả tạo video (nặng)
+video_gen/output/
+video_gen/__pycache__/
+video_gen/refs/_orig/

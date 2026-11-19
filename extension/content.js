@@ -29,6 +29,8 @@
       .bubble small{display:block;font:400 14px system-ui;opacity:.85;margin-top:4px}
       .bubble button{pointer-events:auto;margin-top:14px;padding:8px 18px;border:0;border-radius:20px;
         background:#ffffffd0;color:#3b2f2f;font:600 14px system-ui;cursor:pointer}
+      .heart{position:fixed;font-size:26px;pointer-events:none;animation:up 1.3s ease-out forwards;text-shadow:0 2px 6px #0004}
+      @keyframes up{from{opacity:1;transform:translate(0,0) scale(.7)}to{opacity:0;transform:translate(var(--dx),-90px) scale(1.2)}}
     </style>
     <div class="dim"></div>
     <div class="bubble"><div id="msg">Nghỉ ngơi một chút nhé 🐾</div><small id="sub"></small>
@@ -113,6 +115,24 @@
     src.connect(g).connect(master); src.start();
   }
 
+  // gừ gừ ngắn khi được xoa đầu (dùng lại file gừ gừ, fade vào/ra)
+  function purrBurst(sec) {
+    if (!audio() || !purrBuf || ac.state !== 'running' || purr) return;   // đang gừ gừ nền thì thôi
+    const src = ac.createBufferSource(); src.buffer = purrBuf;
+    const g = ac.createGain(), t = ac.currentTime;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(1.1, t + 0.4);
+    g.gain.setValueAtTime(1.1, t + sec - 0.8); g.gain.linearRampToValueAtTime(0, t + sec);
+    src.connect(g).connect(master); src.start(t, Math.random() * 4); src.stop(t + sec + 0.1);
+  }
+  function hearts(x, y) {
+    for (let i = 0; i < 3; i++) {
+      const h = document.createElement('div');
+      h.className = 'heart'; h.textContent = ['❤', '💗', '💕'][i % 3];
+      h.style.cssText = `left:${x - 12 + (i - 1) * 22}px;top:${y - 20}px;animation-delay:${i * 0.15}s;--dx:${(i - 1) * 14}px`;
+      root.appendChild(h); setTimeout(() => h.remove(), 1700);
+    }
+  }
+
   // ---------- Cat behaviour ----------
   const cat = { mode: 'walk', clip: 'walk', t: 0, edge: 0, u: 120, dir: 1, scale: ROAM_SCALE,
     angle: 0, px: 0, py: 0, nextSit: 8, nextTurn: 10, holdUntil: 0, started: false };
@@ -157,6 +177,45 @@
     cat.mode = 'scratch'; cat.clip = 'scratch'; cat.t = 0;
   }
   const FEET = { sleep: 0.86 };   // vị trí chân/đáy thân trong khung hình (mặc định 0.95)
+
+  // ---- Xoa đầu (chạm vào đầu) / cào (chạm vào thân) ----
+  // Vùng "đầu" tính theo hộp bao của mèo ở khung hình đang hiển thị, nên đúng với mọi tư thế/hướng/góc xoay.
+  const bboxCache = new Map();
+  function catBox() {
+    const c = clips[cat.clip]; if (!c) return null;
+    const key = cat.clip + ':' + cat.frame + ':' + cat.flip;
+    if (bboxCache.has(key)) return bboxCache.get(key);
+    const d = ctx.getImageData(0, 0, c.w, c.h).data;
+    let x0 = c.w, x1 = 0, y0 = c.h, y1 = 0;
+    for (let y = 0; y < c.h; y += 2) for (let x = 0; x < c.w; x += 2) {
+      if (d[(y * c.w + x) * 4 + 3] > 40) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    }
+    const box = x1 > x0 ? { x0, x1, y0, y1 } : null;
+    if (bboxCache.size > 300) bboxCache.clear();
+    bboxCache.set(key, box);
+    return box;
+  }
+  function zoneAt(x, y) {
+    const c = clips[cat.clip], box = c && catBox();
+    if (!box) return 'body';
+    const a = cat.angle * Math.PI / 180, cs = Math.cos(a), sn = Math.sin(a), dx = x - cat.px, dy = y - cat.py;
+    const lx = (dx * cs + dy * sn) / cat.scale + clips.walk.w / 2;                       // toạ độ trong khung sprite
+    const ly = (-dx * sn + dy * cs) / cat.scale + clips.walk.h * (FEET[cat.clip] || 0.95);
+    const bw = box.x1 - box.x0, bh = box.y1 - box.y0;
+    if (lx < box.x0 || lx > box.x1 || ly < box.y0 || ly > box.y1) return 'body';
+    const front = cat.flip ? lx < box.x0 + 0.32 * bw : lx > box.x1 - 0.32 * bw;    // đầu ở phía mèo đang hướng tới
+    if (cat.clip === 'walk_sit' && cat.frame >= WALK_FRAMES_IN_SIT_CLIP)             // ngồi nhìn thẳng: đầu ở phía trên giữa
+      return ly < box.y0 + 0.45 * bh && Math.abs(lx - (box.x0 + box.x1) / 2) < 0.3 * bw ? 'head' : 'body';
+    if (cat.clip === 'sleep') return (cat.flip ? lx < box.x0 + 0.38 * bw : lx > box.x1 - 0.38 * bw) ? 'head' : 'body';
+    return front && ly < box.y0 + 0.62 * bh ? 'head' : 'body';
+  }
+
+  function pet(x, y) {
+    hearts(x, y); purrBurst(3);
+    const name = cat.mode === 'sit' && cat.frame >= WALK_FRAMES_IN_SIT_CLIP && clips.pet_sit ? 'pet_sit' : 'pet';
+    if (!clips[name] || cat.mode === 'pet' || cat.mode === 'scratch' || cat.mode === 'jump') return;
+    cat.mode = 'pet'; cat.clip = name; cat.t = 0;
+  }
 
   const upDir = () => (cat.edge === 1 ? 1 : -1);   // dir nào là đi lên trên tường
 
@@ -259,12 +318,15 @@
       if (cat.t * c.fps >= c.frames) enterWalk(cat.dir);
     } else if (cat.mode === 'turn') {
       if (cat.t * c.fps >= c.frames) { cat.dir = -cat.dir; enterWalk(); }
+    } else if (cat.mode === 'pet') {      // được xoa đầu xong thì quay lại việc đang làm
+      if (cat.t * c.fps >= c.frames) { if (blocking && cat.edge === 0) enterRestedSit(); else enterWalk(); }
     }
 
     const cc = clips[cat.clip];
     const looping = cat.mode === 'walk' || cat.mode === 'sleep' || cat.mode === 'jump';
     const frame = looping ? (cat.t * cc.fps) % cc.frames : Math.min(cc.frames - 1, cat.t * cc.fps);
-    drawFrame(cat.clip, frame, cat.mode === 'turn' ? cat.turnFlip : cat.dir < 0);
+    cat.flip = cat.mode === 'turn' ? cat.turnFlip : cat.dir < 0; cat.frame = frame | 0;
+    drawFrame(cat.clip, frame, cat.flip);
 
     // vị trí + góc xoay theo cạnh đang đứng (làm mượt để quanh góc không bị giật)
     const [tx, ty] = anchor(cat.edge, cat.u, vw, vh);
@@ -308,7 +370,17 @@
     applyState();
   });
 
-  cv.addEventListener('click', () => { scratch(); if (blocking) startPurr(); });
+  // Trỏ vào đầu: con trỏ thành bàn tay (xoa đầu); trỏ vào thân: con trỏ thường, bấm thì mèo cào.
+  let lastMove = 0;
+  cv.addEventListener('mousemove', (e) => {
+    const now = performance.now(); if (now - lastMove < 40) return; lastMove = now;
+    cv.style.cursor = zoneAt(e.clientX, e.clientY) === 'head' ? 'grab' : 'pointer';
+  });
+  cv.addEventListener('mousedown', (e) => { if (zoneAt(e.clientX, e.clientY) === 'head') cv.style.cursor = 'grabbing'; });
+  cv.addEventListener('click', (e) => {
+    if (zoneAt(e.clientX, e.clientY) === 'head') pet(e.clientX, e.clientY); else scratch();
+    if (blocking) startPurr();
+  });
   $('#skip').addEventListener('click', () => chrome.runtime.sendMessage({ type: 'skip-break' }));
   // mở khoá audio ở lần chạm đầu tiên (chính sách autoplay)
   addEventListener('pointerdown', () => { audio(); if (blocking) startPurr(); }, { capture: true });
@@ -331,7 +403,7 @@
     if (clips.walk || loading) return;
     loading = true;
     Promise.all([loadClip('walk'), loadClip('walk_sit'), loadClip('scratch', true), loadClip('turn', true),
-      loadClip('standup', true), loadClip('sleep', true)])
+      loadClip('standup', true), loadClip('sleep', true), loadClip('pet', true), loadClip('pet_sit', true)])
       .catch(() => { for (const k in clips) delete clips[k]; })
       .finally(() => { loading = false; });
   }

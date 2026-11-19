@@ -1,3 +1,5 @@
+> **Bản mới:** prompt đầy đủ cho ~20 clip (kèm cấu hình ComfyUI/Colab/MiniMax H3) nằm ở `video_gen/clips.json` và `video_gen/README.md`. File này giữ lại các prompt đầu tiên.
+
 # Prompt tạo thêm video cho mèo (Gemini / Veo)
 
 ## Quy tắc chung (áp dụng cho mọi clip)
@@ -53,3 +55,26 @@ Sau đó image-to-video:
 > Edit this image: keep the exact same cat and same green background, but change the pose to: <tư thế>. Same camera angle, same cat size and position in the frame.
 
 Dùng ảnh này làm khung đầu cho Veo.
+
+---
+
+## 5. `cat_pet.mp4` (xoa đầu, khi bấm vào ĐẦU mèo)
+Ảnh tham chiếu (khung đầu và khung cuối): `references/ref_walk_side.png`
+Lưu `Video/cat_pet.mp4`, rồi `bash tools/build_sprites.sh`. Trong app, con trỏ chuột trở thành bàn tay khi trỏ vào đầu mèo; bấm vào thân thì mèo cào (clip `cat_scratch`).
+
+**Chỉ có con mèo trong video, không có bàn tay hay người nào** (bàn tay là con trỏ chuột của app, vẽ đè lên mèo; mèo chỉ cần diễn như đang được vuốt ve).
+
+> The standing white fluffy cat (side view, facing right, as in the reference) is being gently petted on the head by an invisible hand that is not shown. It lowers its head slightly and pushes the top of its head upward and forward into the invisible touch, closes its eyes in bliss, ears relaxed and slightly flattened back, a soft contented expression. Its head moves gently down and up three times as if being stroked from forehead to between the ears, tail tip swaying very slightly, a faint purr in the chest. Then it lifts its head, opens its eyes and returns to the exact starting standing pose. Action about 4 seconds, then the cat stays still. Only the cat is in the frame: no hand, no person, no arm, no objects.
+
++ phần đuôi chung. Nếu Veo vẫn vẽ ra bàn tay, thêm: *"absolutely no human hand, no fingers, no arm anywhere in the frame"*.
+
+## 6. `cat_pet_sit.mp4` (tuỳ chọn: xoa đầu khi mèo đang ngồi nhìn thẳng, lúc chặn màn hình)
+Ảnh tham chiếu: `references/ref_sit_front.png`
+
+Cũng chỉ có con mèo, không có bàn tay.
+
+> The white fluffy cat sits facing the camera (as in the reference) and is being gently petted on the head by an invisible hand that is not shown. It tilts its head slightly upward into the invisible touch, closes its eyes, ears relaxed, with a content smile-like expression, and its head moves gently down and up three times as if being stroked. Then it opens its eyes and returns to the exact starting sitting pose. About 4 seconds. Only the cat is in the frame: no hand, no person, no arm, no objects.
+
++ phần đuôi chung. Nếu Veo vẫn vẽ ra bàn tay, thêm: *"absolutely no human hand, no fingers, no arm anywhere in the frame"*.
+
+Cách mèo xác định "đầu" so với "thân": code lấy hộp bao của mèo ở khung hình đang hiện, đầu là ~1/3 phía trước và ~60% phía trên của hộp (mèo ngồi nhìn thẳng thì đầu là phần trên giữa). Vì vậy clip nên giữ đầu mèo ở đúng chỗ đó, đừng quay mèo đi chỗ khác.

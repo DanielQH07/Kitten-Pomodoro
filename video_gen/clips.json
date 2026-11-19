@@ -1,0 +1,355 @@
+{
+  "version": 1,
+  "_doc": "Cấu hình tạo video mèo. Xem video_gen/README.md. Chạy: python video_gen/comfy_batch.py --list",
+  "global": {
+    "resolution": [
+      848,
+      480
+    ],
+    "length": 81,
+    "fps": 16,
+    "seed": 20260101,
+    "character": "a realistic fluffy white long-haired cat with amber eyes, a pink nose and pink inner ears",
+    "prefix": "{character}, on a solid flat chroma-key green screen background identical to the reference image, static locked camera, the cat stays in the same place and the same size in the frame, the whole body and tail always fully visible, soft even studio lighting, no shadows on the background.",
+    "suffix": "Smooth natural cat motion, realistic fur physics, high detail. Only the cat is in the frame.",
+    "negative_cn": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走",
+    "negative_en": "human, person, hand, fingers, arm, text, watermark, logo, toy, ball, string, extra animals, camera movement, zoom, cut, green fur, green tint on fur, shadow on the wall, deformed, extra legs, blurry"
+  },
+  "backends": {
+    "wan": {
+      "_doc": "Wan 2.2 14B chạy trong ComfyUI trên Colab L4 (miễn phí, cần ~37GB tải model mỗi phiên). quality: lightx2v = 4 bước (nhanh), full = 20 bước (đẹp hơn, chậm gấp ~5 lần).",
+      "quality": "lightx2v",
+      "unet_high": "wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors",
+      "unet_low": "wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors",
+      "lora_high": "wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors",
+      "lora_low": "wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors",
+      "clip": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "vae": "wan_2.1_vae.safetensors"
+    },
+    "h3": {
+      "_doc": "MiniMax H3 qua API node của ComfyUI (tốn credit Comfy; cần COMFY_API_KEY). model: 'MiniMax H3' | 'MiniMax H3 Max' | 'MiniMax H3 Max Turbo'. Độ dài tối thiểu 4-5 giây.",
+      "model": "MiniMax H3 Max Turbo",
+      "resolution": "768P",
+      "prompt_expansion_mode": "balanced"
+    }
+  },
+  "models": [
+    {
+      "dir": "diffusion_models",
+      "file": "wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors",
+      "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors"
+    },
+    {
+      "dir": "diffusion_models",
+      "file": "wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors",
+      "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors"
+    },
+    {
+      "dir": "loras",
+      "file": "wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors",
+      "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors"
+    },
+    {
+      "dir": "loras",
+      "file": "wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors",
+      "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors"
+    },
+    {
+      "dir": "text_encoders",
+      "file": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "url": "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors"
+    },
+    {
+      "dir": "vae",
+      "file": "wan_2.1_vae.safetensors",
+      "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/vae/wan_2.1_vae.safetensors"
+    }
+  ],
+  "refs": {
+    "stand_right": {
+      "file": "refs/stand_right.png",
+      "desc": "STAND: mèo đứng nhìn ngang, quay sang phải (tư thế trung tâm 1)"
+    },
+    "sit_front": {
+      "file": "refs/sit_front.png",
+      "desc": "SIT: mèo ngồi nhìn thẳng (tư thế trung tâm 2)"
+    },
+    "lie_side": {
+      "file": "refs/lie_side.png",
+      "desc": "LIE: mèo nằm nghiêng ngủ (tư thế trung tâm 3)"
+    },
+    "held": {
+      "file": "refs/held.png",
+      "desc": "HELD: mèo bị nhấc lên, thân thõng, chân sau lủng lẳng. CHƯA CÓ ảnh: tạo bằng Gemini (Nano Banana) / ComfyUI image-edit từ stand_right",
+      "generate": {
+        "from": "stand_right",
+        "prompt": "Edit the attached image. Keep the exact same cat: identical face, amber eyes, pink nose, pink inner ears, and the same long, fluffy white fur. Keep the exact same flat chroma-key green background, the same lighting, the same 16:9 framing and the same image size.\n\nChange only the pose. The cat has been picked up and is held in mid-air under its chest and front legs by an invisible hand that is not shown. Its body hangs stretched downward at a slight angle with the head at the top, turned a little to the right, and its front legs are raised by the grip. Its hind legs dangle limp and straight down, its fluffy tail hangs down and curves slightly, and its belly fur is stretched a little. Its expression is mildly annoyed and resigned, with half-closed eyes and ears slightly back.\n\nPlace the cat in the center of the frame, in the same size as in the original image, with the whole body, all four legs and the tail fully visible and nothing cropped. The background must stay a perfectly flat, even green, with no floor, no shadow, no vignette and no reflection on the fur. No hand, no fingers, no arm, no person, no object, no text and no watermark anywhere in the image."
+      }
+    },
+    "belly_up": {
+      "file": "refs/belly_up.png",
+      "desc": "BELLY: mèo nằm ngửa, bụng lên, chân trước co. CHƯA CÓ ảnh: tạo từ lie_side",
+      "generate": {
+        "from": "lie_side",
+        "prompt": "Edit the attached image. Keep the exact same cat: identical face, pink nose, pink inner ears, and the same long, fluffy white fur. Keep the exact same flat chroma-key green background, the same lighting, the same 16:9 framing and the same image size.\n\nChange only the pose. The cat lies on its back with its fluffy white belly facing up. Its front paws are curled loosely against its chest, its hind legs are relaxed and slightly apart with the paws hanging softly, and its head is tilted to one side, looking up with soft, trusting half-open eyes. Its long tail rests on the ground beside its body. The pose looks relaxed and playful, as if inviting a belly rub.\n\nKeep the cat in the same position and about the same overall size as in the original image, with the whole body and tail fully visible and nothing cropped. The background must stay a perfectly flat, even green, with no floor texture, no shadow, no vignette and no reflection on the fur. No hand, no person, no object, no text and no watermark anywhere in the image."
+      }
+    }
+  },
+  "clips": [
+    {
+      "id": "run",
+      "priority": 1,
+      "status": "todo",
+      "start": "stand_right",
+      "end": "stand_right",
+      "frames": 33,
+      "loop": true,
+      "sprite_sec": 2,
+      "used_for": "đuổi laser / cần câu lông",
+      "prompt": "The cat runs at a fast gallop in place, side view facing right, as if on an invisible treadmill. Its legs stretch and tuck in a continuous running cycle, body undulating, fur and tail flowing, ears pinned slightly back, eyes focused straight ahead. The camera tracks the cat so it stays in the same position in the frame. Seamless loop."
+    },
+    {
+      "id": "crouch_wiggle",
+      "priority": 1,
+      "status": "todo",
+      "start": "stand_right",
+      "end": "stand_right",
+      "frames": 49,
+      "sprite_sec": 3,
+      "used_for": "rình mồi trước khi vồ",
+      "prompt": "The cat lowers its chest to the ground and raises its hindquarters, front paws planted, staring intently ahead to the right with wide dark pupils. Its rear end wiggles side to side several times, tail tip twitching, ears pointed forward, body tense and ready to pounce. Then it relaxes and rises back to the starting standing pose."
+    },
+    {
+      "id": "pounce",
+      "priority": 1,
+      "status": "todo",
+      "start": "stand_right",
+      "end": "stand_right",
+      "frames": 65,
+      "sprite_sec": 4,
+      "used_for": "vồ laser / lông",
+      "prompt": "The cat crouches low, wiggles once, then springs forward and upward in a pounce with its front paws stretched out and claws spread, the body fully extended in the air, then lands softly on all four paws in the same spot without travelling across the frame, looks around proudly and returns to the starting standing pose."
+    },
+    {
+      "id": "held_dangle",
+      "priority": 1,
+      "status": "todo",
+      "start": "held",
+      "end": "held",
+      "frames": 33,
+      "loop": true,
+      "sprite_sec": 2,
+      "used_for": "lúc bị chuột nhấc lên",
+      "prompt": "The cat hangs in mid-air lifted by an invisible hand that is not shown, its body limp and stretched downward, hind legs dangling, front paws loosely curled, tail swaying slowly like a pendulum, a mildly annoyed look with half-closed eyes. Gentle swinging motion of the whole body. Seamless loop."
+    },
+    {
+      "id": "land",
+      "priority": 1,
+      "status": "todo",
+      "start": "held",
+      "end": "stand_right",
+      "frames": 33,
+      "sprite_sec": 2,
+      "used_for": "thả mèo ra, rơi xuống tiếp đất",
+      "prompt": "The cat is released and drops, twists in mid-air and lands softly on all four paws in the same spot with a small cushioned bounce, then shakes its head once and stands still facing right."
+    },
+    {
+      "id": "pet",
+      "priority": 1,
+      "status": "todo",
+      "start": "stand_right",
+      "end": "stand_right",
+      "frames": 65,
+      "sprite_sec": 4,
+      "used_for": "bàn tay xoa đầu (con trỏ chuột là bàn tay, KHÔNG có tay trong video)",
+      "prompt": "The standing cat is being gently petted on the head by an invisible hand that is not shown. It lowers its head slightly and pushes the top of its head upward and forward into the invisible touch, closes its eyes in bliss, ears relaxed. Its head moves gently down and up three times as if being stroked from forehead to between the ears, tail tip swaying slightly. Then it lifts its head, opens its eyes and returns to the exact starting standing pose. No hand, no person, no arm in the frame."
+    },
+    {
+      "id": "swat",
+      "priority": 2,
+      "status": "todo",
+      "start": "sit_front",
+      "end": "sit_front",
+      "frames": 49,
+      "sprite_sec": 3,
+      "used_for": "vả lông / laser khi ngồi",
+      "prompt": "The cat sits facing the camera, notices something small moving at the upper right, and swats at it twice with its right front paw in quick light taps, ears forward and pupils wide. Then it lowers the paw and returns to the exact starting sitting pose."
+    },
+    {
+      "id": "reach_up",
+      "priority": 2,
+      "status": "todo",
+      "start": "stand_right",
+      "end": "stand_right",
+      "frames": 65,
+      "sprite_sec": 4,
+      "used_for": "lông treo cao",
+      "prompt": "The cat rises up onto its hind legs, stretching its whole body upward and to the right, both front paws reaching high toward something above and in front of it with claws out, tail balancing behind. It holds the reach for a moment, then drops back down onto all fours and returns to the starting standing pose."
+    },
+    {
+      "id": "catch_bite",
+      "priority": 2,
+      "status": "todo",
+      "start": "sit_front",
+      "end": "sit_front",
+      "frames": 49,
+      "sprite_sec": 3,
+      "used_for": "bắt được lông",
+      "prompt": "The cat sits facing the camera, then lunges forward grabbing an invisible object with both front paws, bites at it, and shakes its head side to side excitedly. Then it lets go, sits back and looks proud with a satisfied expression, returning to the starting sitting pose. The object itself is never visible."
+    },
+    {
+      "id": "watch_track",
+      "priority": 2,
+      "status": "todo",
+      "start": "sit_front",
+      "end": "sit_front",
+      "frames": 33,
+      "loop": true,
+      "sprite_sec": 2,
+      "used_for": "ngồi nhìn theo laser",
+      "prompt": "The cat sits facing the camera and watches something small and fast moving: its head and eyes smoothly track from left to right and slightly up, pupils wide, ears swiveling toward the movement, the body staying still. Then the head returns to the center."
+    },
+    {
+      "id": "headbutt",
+      "priority": 2,
+      "status": "todo",
+      "start": "stand_right",
+      "end": "stand_right",
+      "frames": 49,
+      "sprite_sec": 3,
+      "used_for": "dụi đầu vào con trỏ",
+      "prompt": "The cat nuzzles forward and upward, pushing the top of its head and cheek against an invisible hand in front of it, eyes closed in contentment, ears relaxed, tail held high with a curled tip. Then it returns to the starting standing pose. No hand in the frame."
+    },
+    {
+      "id": "stand_to_sit",
+      "priority": 2,
+      "status": "todo",
+      "start": "stand_right",
+      "end": "sit_front",
+      "frames": 49,
+      "sprite_sec": 3,
+      "used_for": "chuyển STAND → SIT (thay cho cảnh cắt đột ngột)",
+      "prompt": "The standing cat turns its body toward the camera and sits down, settling with its legs out in front of it and its tail curling on the ground, ending in the front-facing sitting pose of the last frame."
+    },
+    {
+      "id": "sit_to_stand",
+      "priority": 2,
+      "status": "todo",
+      "start": "sit_front",
+      "end": "stand_right",
+      "frames": 49,
+      "sprite_sec": 3,
+      "used_for": "chuyển SIT → STAND (thay cho clip standup cũ)",
+      "prompt": "The cat sits facing the camera, stretches and yawns, gets up onto all four legs and turns to face right, ending in the side-view standing pose of the last frame."
+    },
+    {
+      "id": "pet_sit",
+      "priority": 2,
+      "status": "todo",
+      "start": "sit_front",
+      "end": "sit_front",
+      "frames": 65,
+      "sprite_sec": 4,
+      "used_for": "xoa đầu khi đang ngồi (lúc chặn màn hình)",
+      "prompt": "The cat sits facing the camera and is being gently petted on the head by an invisible hand that is not shown. It tilts its head slightly upward into the invisible touch, closes its eyes, ears relaxed, with a content expression, and its head moves gently down and up three times as if being stroked. Then it opens its eyes and returns to the exact starting sitting pose. No hand, no person, no arm in the frame."
+    },
+    {
+      "id": "belly_roll",
+      "priority": 3,
+      "status": "todo",
+      "start": "lie_side",
+      "end": "belly_up",
+      "frames": 49,
+      "sprite_sec": 3,
+      "used_for": "lăn ra nằm ngửa (bẫy bụng)",
+      "prompt": "The cat lying on its side stretches, rolls onto its back and exposes its fluffy belly, front paws curled up, hind legs relaxed apart, looking up with soft eyes, ending lying on its back."
+    },
+    {
+      "id": "belly_kick",
+      "priority": 3,
+      "status": "todo",
+      "start": "belly_up",
+      "end": "belly_up",
+      "frames": 33,
+      "loop": true,
+      "sprite_sec": 2,
+      "used_for": "ôm tay đạp chân sau",
+      "prompt": "The cat lying on its back wraps its front paws around an invisible hand and bunny-kicks rapidly with its hind legs, head tilted playfully, tail wagging on the ground. Seamless loop. No hand in the frame."
+    },
+    {
+      "id": "belly_return",
+      "priority": 3,
+      "status": "todo",
+      "start": "belly_up",
+      "end": "lie_side",
+      "frames": 33,
+      "sprite_sec": 2,
+      "used_for": "lật lại nằm nghiêng",
+      "prompt": "The cat lying on its back rolls back onto its side, settles down, curls its tail around and relaxes, ending in the side-lying sleeping pose."
+    },
+    {
+      "id": "hiss_squirm",
+      "priority": 3,
+      "status": "todo",
+      "start": "held",
+      "end": "held",
+      "frames": 33,
+      "loop": true,
+      "sprite_sec": 2,
+      "used_for": "bị nhấc quá lâu thì khè và giãy",
+      "prompt": "The held cat squirms and twists its body, flailing its legs, ears flattened, mouth open showing teeth, hissing angrily, tail lashing from side to side. Seamless loop."
+    },
+    {
+      "id": "knead",
+      "priority": 3,
+      "status": "todo",
+      "start": "lie_side",
+      "end": "lie_side",
+      "frames": 49,
+      "sprite_sec": 3,
+      "used_for": "nhào bột khi nằm",
+      "prompt": "The cat lying on its side kneads rhythmically with its front paws, alternating left and right on an invisible surface, eyes half closed in bliss, then settles back into the starting side-lying pose."
+    },
+    {
+      "id": "groom",
+      "priority": 3,
+      "status": "todo",
+      "start": "sit_front",
+      "end": "sit_front",
+      "frames": 65,
+      "sprite_sec": 4,
+      "used_for": "liếm chân, rửa mặt",
+      "prompt": "The cat sits facing the camera, lifts one front paw, licks it several times, then wipes its face and ear with the wet paw, then puts the paw down and returns to the exact starting sitting pose."
+    },
+    {
+      "id": "lie_down",
+      "priority": 3,
+      "status": "todo",
+      "start": "stand_right",
+      "end": "lie_side",
+      "frames": 65,
+      "sprite_sec": 4,
+      "used_for": "chuyển STAND → LIE",
+      "prompt": "The standing cat circles slightly, lowers its front, folds its legs and lies down on its side, its tail curling around, eyes closing slowly, ending in the side-lying sleeping pose of the last frame."
+    },
+    {
+      "id": "get_up",
+      "priority": 3,
+      "status": "todo",
+      "start": "lie_side",
+      "end": "stand_right",
+      "frames": 65,
+      "sprite_sec": 4,
+      "used_for": "chuyển LIE → STAND",
+      "prompt": "The sleeping cat opens its eyes, lifts its head, stretches its front legs forward, rises onto all four legs and turns to face right, ending in the side-view standing pose of the last frame."
+    }
+  ],
+  "done_clips": [
+    "walk",
+    "walk_sit",
+    "scratch",
+    "turn",
+    "standup",
+    "sleep"
+  ]
+}
