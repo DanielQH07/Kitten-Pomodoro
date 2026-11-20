@@ -3,9 +3,9 @@
 (() => {
   const FW = 1344, FH = 768, AX = 580, FEET = 716;           // khung clip; điểm neo (giữa thân, chân) trong khung
   const CAT_LEN = 940, CAT_H = 536;                          // thân mèo đứng (px trong khung)
+  const MODE = document.documentElement.dataset.mode || 'web', FREE_AUDIO = MODE === 'overlay' || !!window.Capacitor;      // cửa sổ trong suốt / app Android: tự phát được tiếng
   const SMALL = Math.min(innerWidth, innerHeight) < 600;
-  const uiBar = document.querySelector('.ui');
-  const BOT = () => { const r = uiBar.getBoundingClientRect(); return r.top > innerHeight / 2 ? innerHeight - r.top + 4 : 0; }, HV = () => innerHeight - BOT();      // thanh công cụ nằm ở đáy (điện thoại dọc): chừa chỗ cho mèo đứng phía trên
+  const BOT = () => 0, HV = () => innerHeight;
   const ROAM = (SMALL ? 0.22 : 0.3) * 1.15, SPEED = 95;      // to hơn bản trước 15%
   const EDGE_ANGLE = { 0: 0, 1: -90, 3: 90 };
   const POSE_OF = { stand_right: 'stand', stand_left: 'stand', sit_front: 'sit', lie_side: 'lie', belly_up: 'belly', held: 'held', walk: 'stand' };
@@ -53,7 +53,7 @@
     'thump', 'swish1', 'swish2', 'rustle1', 'rustle2', 'music'];
   function audio() {
     if (!A.ac) {
-      if (!(navigator.userActivation && navigator.userActivation.hasBeenActive)) return null;
+      if (!FREE_AUDIO && !(navigator.userActivation && navigator.userActivation.hasBeenActive)) return null;
       A.ac = new AudioContext(); A.master = A.ac.createGain(); A.master.connect(A.ac.destination);
       SOUNDS.forEach((n) => fetch(`sounds/${n}.mp3`).then((r) => r.arrayBuffer()).then((b) => A.ac.decodeAudioData(b)).then((d) => {
         A.buf[n] = d; if (n === 'purr' && A.wantPurr) purr(true); if (n === 'music' && state.music && blocking) musicOn(true);
@@ -425,9 +425,8 @@
     if (!tg) cat.noticed = false;
     const here = blocking, idleUser = now_() - ptr.t > 9000;
     if (cat.pose === 'stand') {
-      if (blocking && cat.edge === 0 && Math.abs(cat.u - innerWidth / 2) > 12) return startWalk(Math.sign(innerWidth / 2 - cat.u));
       if (blocking && cat.edge !== 0) return startWalk();
-      weighted([[here ? 0 : 50, () => startWalk(Math.random() < 0.5 ? 1 : -1)], [here ? 35 : 12, () => ACT.standToSit(() => meow(here))],
+      weighted([[here ? 40 : 50, () => startWalk(Math.random() < 0.5 ? 1 : -1)], [here ? 35 : 12, () => ACT.standToSit(() => meow(here))],
         [here ? 8 : 5, () => ACT.lieDown()], [7, ACT.headbutt], [5, ACT.reach], [8, () => ACT.crouchPounce(null)],
         [here ? 0 : 6, () => { turnTo(-cat.dir); setPose('stand'); }],
         [clips.meme ? 5 : 0, ACT.meme], [cat.energy > 60 ? 4 : 0, () => ACT.zoomies(here ? 2 : 3)], [here && idleUser ? 10 : 0, askAttention]]);
@@ -498,11 +497,11 @@
   }
 
   // ---------- Vòng lặp ----------
+  // Cỡ mèo trong giờ nghỉ: đủ to để thu hút nhưng không che hết màn hình làm việc
+  const PLAY = () => (SMALL ? Math.min(innerWidth * 0.7 / CAT_LEN, innerHeight * 0.95 / FH) : ROAM * 1.5);
   function wantScale(vw, vh) {
     if (!blocking || cat.edge !== 0) return ROAM;
-    const bs = Math.min(vw * (SMALL ? 0.7 : 0.92) / CAT_LEN, vh * 0.95 / FH);
-    if (target() || tool !== 'hand' || cat.zoom) return Math.min(bs, Math.max(ROAM * 1.45, bs * 0.55));    // lúc chơi: nhỏ lại để chạy khắp màn hình
-    return bs;
+    return PLAY();
   }
   function tick(now) {
     const dt = Math.min(0.1, (now - lastT) / 1000); lastT = now;
@@ -600,7 +599,7 @@
     drawToys(now, dt);
     if (blocking) {
       const left = Math.max(0, state.endsAt - Date.now());
-      $('#sub').textContent = `Còn ${Math.floor(left / 60000)}:${String(Math.floor(left / 1000) % 60).padStart(2, '0')}`;
+      $('#sub').textContent = `${Math.floor(left / 60000)}:${String(Math.floor(left / 1000) % 60).padStart(2, '0')}`;
     }
     $('#dbg').textContent = location.hash === '#debug' ? `${cat.mode} ${cat.pose} ${cat.clip || ''} t=${t.toFixed(2)} tool=${tool} s=${cat.scale.toFixed(2)} e=${cat.energy | 0}` : '';
   }
@@ -665,7 +664,7 @@
   document.addEventListener('mouseleave', () => { ptr.inside = false; });
   addEventListener('pointerdown', (e) => {
     ptr.x = e.clientX; ptr.y = e.clientY; ptr.inside = true; ptr.t = now_(); ptr.down = true; ptr.touch = e.pointerType === 'touch';
-    if (e.target.closest('.ui, #bubble button')) return;
+    if (e.target.closest('#assist')) return;
     ptr.jab = now_();
     const z = zoneAt(e.clientX, e.clientY, ptr.touch ? 3 : 1);
     if (tool === 'treat' && !z) { dropTreat(e.clientX, e.clientY); return; }
@@ -689,7 +688,46 @@
     if (cat.mode === 'idle') cat.idleT = cat.idleDur;
   }
   document.querySelectorAll('[data-tool]').forEach((b) => b.addEventListener('click', () => setTool(b.dataset.tool)));
-  addEventListener('keydown', (e) => { if (e.target.tagName === 'INPUT') return; const m = { 1: 'hand', 2: 'laser', 3: 'feather', 4: 'treat' }[e.key]; if (m) setTool(m); });
+  addEventListener('keydown', (e) => { if (e.target.tagName === 'INPUT') return; const m = { 1: 'hand', 2: 'feather' }[e.key]; if (m) setTool(m); });
+
+  // ---------- Nút nổi kiểu AssistiveTouch ----------
+  const assist = $('#assist'), fab = $('#fab'), menu = $('#menu'), FS = 56;
+  let fabPos; try { fabPos = JSON.parse(localStorage.getItem('kitten2-fab')); } catch (_) {}
+  fabPos = fabPos || { side: 1, y: 0.55 };
+  let awakeT = 0, openT = 0;
+  const wake = () => { assist.classList.add('awake'); clearTimeout(awakeT); awakeT = setTimeout(() => assist.classList.remove('awake'), 3000); };
+  const closeLater = (ms) => { clearTimeout(openT); openT = setTimeout(() => assist.classList.remove('open'), ms); };
+  function placeFab(x, y) {
+    if (x === undefined) { x = fabPos.side ? innerWidth - FS - 8 : 8; y = Math.max(8, Math.min(fabPos.y * innerHeight, innerHeight - FS - 8)); }
+    assist.style.transform = `translate(${x}px,${y}px)`;
+    menu.style.left = fabPos.side ? 'auto' : (FS + 8) + 'px'; menu.style.right = fabPos.side ? (FS + 8) + 'px' : 'auto';
+  }
+  placeFab(); addEventListener('resize', () => placeFab());
+  let fdrag = null;
+  fab.addEventListener('pointerdown', (ev) => { fdrag = { x: ev.clientX, y: ev.clientY, moved: false }; fab.setPointerCapture(ev.pointerId); wake(); });
+  fab.addEventListener('pointermove', (ev) => {
+    if (!fdrag) return;
+    if (!fdrag.moved && Math.hypot(ev.clientX - fdrag.x, ev.clientY - fdrag.y) > 6) { fdrag.moved = true; assist.classList.add('drag'); assist.classList.remove('open'); }
+    if (fdrag.moved) placeFab(Math.max(0, Math.min(ev.clientX - FS / 2, innerWidth - FS)), Math.max(0, Math.min(ev.clientY - FS / 2, innerHeight - FS)));
+  });
+  fab.addEventListener('pointerup', (ev) => {
+    const d = fdrag; fdrag = null; if (!d) return;
+    if (d.moved) { assist.classList.remove('drag'); fabPos = { side: ev.clientX > innerWidth / 2 ? 1 : 0, y: Math.max(0, Math.min(ev.clientY - FS / 2, innerHeight - FS)) / innerHeight }; placeFab(); try { localStorage.setItem('kitten2-fab', JSON.stringify(fabPos)); } catch (_) {} wake(); }
+    else { assist.classList.toggle('open'); wake(); closeLater(6000); }
+  });
+  menu.addEventListener('click', (ev) => { wake(); closeLater(ev.target.closest('#skip') ? 0 : 2500); });
+  assist.addEventListener('pointerenter', wake);
+
+  // Cửa sổ trong suốt trên desktop: chuột xuyên qua, chỉ bắt chuột khi trỏ vào mèo / nút nổi / đang dùng cần câu
+  const native = window.kittenNative; let ignoring = null;
+  function setIgnore(v) { if (native && ignoring !== v) { ignoring = v; native.setIgnore(v); } }
+  if (MODE === 'overlay') {
+    setIgnore(true);
+    addEventListener('pointermove', (ev) => {
+      const over = ev.target.closest && ev.target.closest('#assist');
+      setIgnore(!(over || (blocking && tool === 'feather') || press || cat.mode === 'held' || (blocking && zoneAt(ev.clientX, ev.clientY, 2))));
+    }, true);
+  }
 
   function applyState(s) {
     state = s; const should = s.phase === 'break';
@@ -698,7 +736,7 @@
       session = { pets: 0, catches: 0, treats: 0, belly: 0 }; treatsLeft = 3; renderTreat(); cat.wantFloor = true;
       // mèo chạy từ mép màn hình vào giữa
       const fromLeft = Math.random() < 0.5; cat.exit = false; cat.enter = true; cat.edge = 0; cat.angle = 0; cat.turnA = null; cat.jump = null;
-      cat.scale = Math.min(innerWidth * (SMALL ? 0.7 : 0.92) / CAT_LEN, HV() * 0.95 / FH);
+      cat.scale = PLAY();
       cat.u = fromLeft ? -catW() * 0.5 : innerWidth + catW() * 0.5; cat.px = cat.u; cat.py = HV(); cat.dir = fromLeft ? 1 : -1; cat.started = true;
       startWalk(cat.dir, true);
     }
