@@ -83,7 +83,7 @@ def auto_cues(cid, m, a):
     if cid == 'land':
         land = next((i for i in range(20, len(bx)) if bx[i] and bx[i - 1] and bx[i][1] > 35 and bx[i - 1][1] <= 35), None)
         if land: return {'thump': sec(land)}
-    fixed = {'swat': {'swish': 20}, 'reach_up': {'swish': 33}, 'catch_bite': {'bite': 60}, 'belly_roll': {'thump': 40}, 'scratch': {'swish': 40}}
+    fixed = {'land': {'thump': 23}, 'swat': {'swish': 20}, 'reach_up': {'swish': 33}, 'catch_bite': {'bite': 60}, 'belly_roll': {'thump': 40}, 'scratch': {'swish': 40}}
     return {k: sec(f) for k, f in fixed.get(cid, {}).items()}
 
 
