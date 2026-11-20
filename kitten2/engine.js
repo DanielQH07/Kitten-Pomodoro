@@ -42,6 +42,7 @@
   }
   function renderBond() {
     const l = level(), a = lvXp(l), b = lvXp(l + 1);
+    if (window.KS_bond) window.KS_bond();
     $('#bondLv').textContent = 'Lv ' + l; $('#bondBar').style.width = Math.round(100 * (bond.xp - a) / (b - a)) + '%';
   }
   let toastTimer = 0;
@@ -134,7 +135,8 @@
     wallTop: 0, jump: null, held: null, heldSince: 0, flipSign: 1, turnA: null, hop: 0, fast: false, energy: 100, restUntil: 0,
     last: {}, pets: [], noticed: false };
   let lastT = now_();
-  const anchor = (e, u, vw, vh) => (e === 0 ? [u, vh] : e === 1 ? [vw, vh - u] : [0, u]);
+  const floorY = (vh) => (cat.floor ? cat.shelfY : vh);      // tầng 0: đáy màn hình, tầng 1: "kệ" vô hình ở nửa trên
+  const anchor = (e, u, vw, vh) => (e === 0 ? [u, floorY(vh)] : e === 1 ? [vw, vh - u] : [0, u]);
   const upDir = () => (cat.edge === 1 ? 1 : -1);
   const catW = () => CAT_LEN * cat.scale, catH = () => CAT_H * cat.scale;
   const cd = (k, s) => { const n = now_(); if (n - (cat.last[k] || 0) < s * 1000) return false; cat.last[k] = n; return true; };
@@ -205,8 +207,14 @@
   function mood(e, ms = 1400) { moodEl.textContent = e; moodEl.classList.remove('pop'); void moodEl.offsetWidth; moodEl.classList.add('pop'); moodUntil = now_() + ms; }
 
   // ---------- Hộp bao + vùng chạm ----------
+  let probeCache = null;
   function probeCat() {
     if (!curLayer) return null;
+    const key = curLayer.tagName === 'VIDEO' ? curLayer.currentTime : -1, n = now_();
+    if (probeCache && probeCache.el === curLayer && probeCache.key === key && n - probeCache.t < 120) return probeCache.p;
+    const p = probeRaw(); probeCache = { el: curLayer, key, t: n, p }; return p;
+  }
+  function probeRaw() {
     try {
       const z = (curLayer.tagName === 'VIDEO' && clips[cat.clip] && clips[cat.clip].el === curLayer && clips[cat.clip].zoom) || 1;
       pctx.clearRect(0, 0, 168, 96); pctx.drawImage(curLayer, (AX - AX * z) / 8, (FEET - FEET * z) / 8, 168 * z, 96 * z);
@@ -218,8 +226,9 @@
   }
   // 'head' | 'body' | 'tail' | null
   function zoneAt(x, y, pad = 1) {
-    const [lx, ly] = screenToFrame(x, y), p = probeCat();
-    if (!p || lx < 0 || ly < 0 || lx >= FW || ly >= FH) return null;
+    const [lx, ly] = screenToFrame(x, y);
+    if (lx < 0 || ly < 0 || lx >= FW || ly >= FH) return null;      // ngoài khung mèo: khỏi dò ảnh (rẻ, gọi được ở mỗi lần di chuột)
+    const p = probeCat(); if (!p) return null;
     const px = (lx / 8) | 0, py = (ly / 8) | 0; let hit = false;
     for (let j = -pad; j <= pad && !hit; j++) for (let i = -pad; i <= pad; i++) {
       const xx = px + i, yy = py + j; if (xx >= 0 && yy >= 0 && xx < 168 && yy < 96 && p.d[(yy * 168 + xx) * 4 + 3] > 40) { hit = true; break; }
@@ -250,9 +259,10 @@
     if (h >= top) { h = top; res = 'top'; } else if (h <= lo) { h = lo; res = 'bottom'; }
     cat.u = cat.edge === 1 ? h : vh - h; return res;
   }
-  function startJump(edge, u, dir, vw, vh, H) {
-    const [x, y] = anchor(edge, u, vw, vh);
-    cat.jump = { t: 0, dur: 0.75, from: { x: cat.px, y: cat.py, a: cat.angle }, to: { edge, u, dir, x, y, a: EDGE_ANGLE[edge] }, arc: Math.max(60, H * 0.45) };
+  function startJump(edge, u, dir, vw, vh, H, floor = 0, shelfY = cat.shelfY) {
+    let [x, y] = anchor(edge, u, vw, vh); if (edge === 0) y = floor ? shelfY : vh;
+    const up = Math.max(0, cat.py - y);
+    cat.jump = { t: 0, dur: 0.6 + Math.min(0.35, up / 1400), from: { x: cat.px, y: cat.py, a: cat.angle }, to: { edge, u, dir, x, y, a: EDGE_ANGLE[edge], floor, shelfY }, arc: Math.max(60, H * 0.45) + up * 0.25 };
     cat.mode = 'jump'; cat.dir = dir; cat.turnA = null; playWalkLoop(1); meow(false);
   }
   const jumpToWall = (vw, vh, W, H) => { const e = cat.dir > 0 ? 1 : 3, lo = Math.min(W / 2, vh / 2); cat.wallTop = Math.max(W + 40, vh * rnd(0.4, 0.8)); startJump(e, e === 1 ? lo : vh - lo, e === 1 ? 1 : -1, vw, vh, H); };
@@ -286,7 +296,7 @@
     standToSit: (then) => play('stand_to_sit', { rate: target() ? 1.6 : 1, onend: () => { setPose('sit'); then && then(); } }),
     sitToStand: (then) => play('sit_to_stand', { rate: target() ? 1.7 : 1, onend: () => { setPose('stand'); then && then(); } }),
     lieDown: (then) => play('lie_down', { onend: () => { setPose('lie'); then && then(); } }),
-    getUp: () => play('get_up'),
+    getUp: () => play('get_up', { rate: target() ? 1.9 : 1 }),
     groom: () => play('groom'),
     knead: () => play('knead', { cues: [[0.5, () => mood('💗', 1600)]] }),
     watch: () => play('watch_track', { cues: [[0.4, () => sfx(pick(['chirp1', 'chirp2']), 0.7, 1, 4000)]] }),
@@ -330,7 +340,7 @@
     },
     bellyRoll: () => play('belly_roll', { cues: [[cue('belly_roll', 'thump', 0.45), () => sfx('thump', 0.5)], [1.5, () => mood('💗', 1500)]] }),
     bellyKick: (n = 2) => { let k = 0; const go = () => play('belly_kick', { onend: () => { if (++k < n) go(); else setPose('belly'); }, cues: [[0.2, () => meow(false)]] }); go(); },
-    bellyReturn: () => play('belly_return'),
+    bellyReturn: () => play('belly_return', { rate: target() ? 1.8 : 1 }),
     zoomies: (n = 3) => {   // chạy loạn: phi qua lại vài lần
       mood('⚡', 1000); meow(true); cat.zoom = true;
       const vw = innerWidth; let k = 0;
@@ -343,6 +353,20 @@
       go();
     },
   };
+  // nhảy lên kệ ở nửa trên màn hình / nhảy xuống đáy
+  function hopLevel(floor, toward) {
+    const vw = innerWidth, vh = HV(), W = catW(), H = catH();
+    if (cat.edge !== 0 || cat.mode === 'held' || cat.mode === 'fall') return false;
+    if (cat.pose === 'sit') { ACT.sitToStand(() => hopLevel(floor, toward)); return true; }
+    if (cat.pose !== 'stand') return false;
+    const lo = Math.min(W * 0.36, vw / 2), dir = toward != null ? (Math.sign(toward - cat.u) || cat.dir) : cat.dir;
+    const u = clamp(toward != null ? toward : cat.u + dir * W * rnd(0.5, 0.9), lo, vw - lo);
+    const shelfY = floor ? clamp(cat.wantShelf || vh * rnd(0.36, 0.5), H * 1.15, vh * 0.55) : cat.shelfY;
+    if (Math.sign(u - cat.u) && Math.sign(u - cat.u) !== cat.dir) cat.dir = Math.sign(u - cat.u);
+    cat.wantShelf = 0; setPose('stand'); sfx(pick(['swish1', 'swish2']), 0.6); if (Math.random() < 0.4) meow(false);
+    startJump(0, u, cat.dir, vw, vh, H, floor, shelfY); cat.jump.level = true; cat.u = u;
+    return true;
+  }
   function caught() {   // vồ xong: rơi gần đồ chơi -> bắt được
     const tg = target(); if (!tg || tg.kind === 'treat') return;
     if (Math.abs(tg.x - cat.px) < catW() * 0.7) {
@@ -368,6 +392,10 @@
     const dx = tg.x - cat.px, adx = Math.abs(dx), face = Math.sign(dx) || cat.dir, W = catW();
     const rel = (cat.py - tg.y) / catH(), feather = tg.kind === 'feather', moving = now_() - ptr.t < 600;
     if (!cat.noticed) { cat.noticed = true; mood('❗', 900); sfx(pick(['chirp1', 'chirp2']), 0.7, 1, 3000); }
+    {
+      const vh = HV(), want = tg.kind === 'treat' || tg.y > vh * 0.55 ? 0 : 1;
+      if (want !== (cat.floor || 0) && cd('hop', 2.5)) { cat.wantShelf = want ? tg.y + catH() * 0.9 : 0; if (hopLevel(want, tg.x - face * W * 0.45)) return true; }
+    }
     if (tg.kind === 'treat') {            // đi bộ tới chỗ cá rồi cúi xuống ăn
       if (cat.pose === 'sit') { ACT.sitToStand(); return true; }
       if (face !== cat.dir && adx > W * 0.15) { turnTo(face); return true; }
@@ -375,7 +403,7 @@
       ACT.eat(eatTreat); return true;
     }
     if (cat.energy < 20 && now_() > cat.restUntil) {     // mệt: nằm nghỉ, xoa đầu cho mau lại sức
-      cat.restUntil = now_() + 15000; mood('💤', 2000); toast('Mèo mệt rồi, xoa đầu cho mèo nghỉ chút nhé 💤', 2600);
+      cat.restUntil = now_() + 15000; mood('💤', 2000);
       if (cat.pose === 'stand') ACT.lieDown(); else ACT.sitToStand(() => ACT.lieDown()); return true;
     }
     if (now_() < cat.restUntil) return false;
@@ -397,6 +425,12 @@
     if (!feather || rel < 0.4) { ACT.crouchPounce(tx); return true; }
     const r = Math.random(); r < 0.4 ? ACT.headbutt() : r < 0.7 ? ACT.crouchPounce(tx) : ACT.standToSit(); return true;
   }
+  // có bánh / đồ chơi mới: clip rảnh rỗi đang chạy được tua nhanh để mèo phản ứng sớm (không cắt ngang hình)
+  function hurry() {
+    if (cat.mode === 'clip' && cat.clipEl && !cat.loop && /^(groom|watch|knead|meme|headbutt|stand_to_sit|sit_to_stand|lie_down|get_up|belly|pet|scratch)/.test(cat.clip || ''))
+      cat.clipEl.playbackRate = Math.max(cat.clipEl.playbackRate, 2.2);
+    if (cat.mode === 'idle') cat.idleT = cat.idleDur;
+  }
   // bánh thưởng
   const treats = []; let treatsLeft = 3;
   function dropTreat(x, y) {
@@ -404,11 +438,11 @@
     treatsLeft--; renderTreat();
     const el = document.createElement('div'); el.className = 'treat'; el.textContent = '🐟'; stage.appendChild(el);
     treats.push({ x: clamp(x, 40, innerWidth - 40), y, vy: 0, el, landed: false });
-    if (cat.mode === 'idle') cat.idleT = cat.idleDur;
+    hurry();
   }
   function eatTreat() {
     const t = treats.shift(); if (!t) return;
-    t.el.remove(); session.treats++; bond.treats++; gain(2); meow(true); const [x, y] = headScreen(); hearts(x, y, 4); toast('Măm măm 🐟', 1400);
+    t.el.remove(); session.treats++; bond.treats++; gain(2); meow(true); const [x, y] = headScreen(); hearts(x, y, 4);
     cat.energy = Math.min(100, cat.energy + 25);
   }
   const renderTreat = () => { $('#treatN').textContent = treatsLeft; };
@@ -423,10 +457,13 @@
     const tg = target();
     if (tg && (cat.pose === 'stand' || cat.pose === 'sit')) { if (toyDecide(tg)) return; setPose(cat.pose); cat.idleDur = 0.2; return; }
     if (!tg) cat.noticed = false;
+    if (tg && (cat.pose === 'lie' || cat.pose === 'belly') && (tg.kind === 'treat' ? cd('wake', 1.5) : cd('wakeF', 4) && Math.random() < 0.5)) {   // có bánh / cần câu: dậy
+      mood('❗', 900); return cat.pose === 'belly' ? ACT.bellyReturn() : ACT.getUp();
+    }
     const here = blocking, idleUser = now_() - ptr.t > 9000;
     if (cat.pose === 'stand') {
       if (blocking && cat.edge !== 0) return startWalk();
-      weighted([[here ? 40 : 50, () => startWalk(Math.random() < 0.5 ? 1 : -1)], [here ? 35 : 12, () => ACT.standToSit(() => meow(here))],
+      weighted([[here ? 40 : 50, () => startWalk(Math.random() < 0.5 ? 1 : -1)], [here ? (cat.floor ? 14 : 12) : 0, () => hopLevel(cat.floor ? 0 : 1) || setPose('stand')], [here ? 35 : 12, () => ACT.standToSit(() => meow(here))],
         [here ? 8 : 5, () => ACT.lieDown()], [7, ACT.headbutt], [5, ACT.reach], [8, () => ACT.crouchPounce(null)],
         [here ? 0 : 6, () => { turnTo(-cat.dir); setPose('stand'); }],
         [clips.meme ? 5 : 0, ACT.meme], [cat.energy > 60 ? 4 : 0, () => ACT.zoomies(here ? 2 : 3)], [here && idleUser ? 10 : 0, askAttention]]);
@@ -440,7 +477,7 @@
   }
   function askAttention() {   // mèo đòi chơi khi bạn để yên lâu
     if (!cd('ask', 25)) return setPose(cat.pose);
-    meow(true); mood('💬', 2000); toast(pick(['Meo? Chơi với tui đi 🐾', 'Xoa đầu tui đi mà 🥺', 'Lấy cần câu ra đi! 🪶']), 2400);
+    meow(true); mood('🐾', 2000);
     setPose(cat.pose); cat.idleDur = 3;
   }
 
@@ -456,7 +493,7 @@
     const k = cat.pets.length;
     if (cat.pose === 'stand' || cat.mode === 'walk') {
       cat.pose = 'stand';
-      if (k >= 7 && level() >= 2 && Math.random() < 0.5) { mood('💗', 1800); toast('Mèo tin bạn rồi, nằm ngửa cho xoa bụng kìa 💗', 2400); return ACT.lieDown(() => ACT.bellyRoll()); }
+      if (k >= 7 && level() >= 2 && Math.random() < 0.5) { mood('💗', 1800); return ACT.lieDown(() => ACT.bellyRoll()); }
       if (k >= 3 && Math.random() < 0.45) return ACT.headbutt();
       play(vid('pet'));
     } else if (cat.pose === 'sit') {
@@ -485,7 +522,7 @@
   }
   function startDrag() {
     cat.mode = 'held'; cat.pose = 'held'; cat.held = {}; cat.heldSince = now_(); A.hiss = false; cat.clip = null; cat.clipEl = null; cat.onend = null; cat.move = null;
-    cat.edge = 0; cat.angle = 0; cat.jump = null; cat.turnA = null; cat.zoom = false;
+    cat.edge = 0; cat.angle = 0; cat.jump = null; cat.turnA = null; cat.zoom = false; cat.floor = 0;
     const c = clips.held_dangle; if (c) { c.el.loop = true; c.el.currentTime = 0; c.el.play().catch(() => {}); show(c.el); cat.clipEl = c.el; } else show(posesImg.held);
     meow(true); updatePurr(); document.body.classList.add('dragging');
   }
@@ -527,16 +564,19 @@
     if (cat.turnA) { cat.turnA.t += dt; if (cat.turnA.t >= cat.turnA.dur) cat.turnA = null; }
     if (cat.mode === 'jump') {
       const j = cat.jump; j.t += dt;
-      if (j.t >= j.dur) { cat.edge = j.to.edge; cat.u = j.to.u; cat.dir = j.to.dir; cat.jump = null; cat.px = j.to.x; cat.py = j.to.y; cat.angle = j.to.a; startWalk(); }
+      if (j.t >= j.dur) {
+        cat.edge = j.to.edge; cat.u = j.to.u; cat.dir = j.to.dir; cat.jump = null; cat.px = j.to.x; cat.py = j.to.y; cat.angle = j.to.a;
+        cat.floor = j.to.edge === 0 ? j.to.floor : 0; cat.shelfY = j.to.shelfY;
+        if (j.level) { landFx(0.6); setPose('stand'); cat.idleDur = 0.4; } else startWalk();
+      }
     } else if (cat.mode === 'walk') {
       const tg = cat.exit || cat.enter ? null : target();
       if (cat.exit) { if (cat.u < -W * 0.6 || cat.u > vw + W * 0.6) { cat.exit = false; setPose('stand'); } }
       else if (cat.enter) { if (Math.abs(vw / 2 - cat.u) < W * 0.3) { cat.enter = false; setPose('stand'); cat.idleDur = 0.1; meow(true); } }
       else if (tg) {
-        if (cat.edge === 0) { const dx = tg.x - cat.px; if (Math.abs(dx) < W * (tg.kind === 'treat' ? 0.35 : 0.8)) { setPose('stand'); cat.idleDur = 0; } else if (Math.sign(dx) !== cat.dir) turnTo(Math.sign(dx)); }
+        if (cat.edge === 0 && (tg.kind === 'treat' || tg.y > vh * 0.55 ? 0 : 1) !== (cat.floor || 0) && (cat.last.hop || 0) + 2500 < now_()) { setPose('stand'); cat.idleDur = 0; }
+        else if (cat.edge === 0) { const dx = tg.x - cat.px; if (Math.abs(dx) < W * (tg.kind === 'treat' ? 0.35 : 0.8)) { setPose('stand'); cat.idleDur = 0; } else if (Math.sign(dx) !== cat.dir) turnTo(Math.sign(dx)); }
         else { cat.wantFloor = true; cat.dir = -upDir(); }
-      } else if (blocking) {
-        if (cat.edge === 0) { const dx = vw / 2 - cat.u; if (Math.abs(dx) < 10) { setPose('stand'); cat.idleDur = 0.2; } else if (Math.sign(dx) !== cat.dir) turnTo(Math.sign(dx)); } else cat.dir = -upDir();
       } else if (!cat.exit && !cat.enter && cat.walkT > cat.walkFor) { cat.walkT = 0; if (cat.edge === 0) setPose('stand'); else cat.walkFor = 3; }
       cat.walkT += dt;
       if (cat.mode === 'walk' && !cat.turnA) {
@@ -586,7 +626,7 @@
     }
     catEl.style.transform = `translate(${cat.px}px,${cat.py + cat.hop}px) rotate(${cat.angle}deg) scale(${flip * cat.scale},${cat.scale}) translate(${-AX}px,${-FEET}px)`;
 
-    if (cat.edge === 0 && cat.mode !== 'held' && cat.mode !== 'jump') {      // bóng dưới chân
+    if (cat.edge === 0 && !cat.floor && cat.mode !== 'held' && cat.mode !== 'jump') {      // bóng dưới chân
       const bw = W * (cat.pose === 'lie' || cat.pose === 'belly' ? 0.95 : 0.75) * (1 + cat.hop / H * 0.6);
       shadow.style.cssText = `opacity:${cat.mode === 'fall' ? 0.15 : 0.32};width:${bw}px;height:${bw * 0.1}px;left:${cat.px - bw / 2}px;top:${cat.py - bw * 0.05 + ((BOTTOM[cat.pose] || FEET) - FEET) * cat.scale}px`;
     } else shadow.style.opacity = 0;
@@ -606,6 +646,11 @@
 
   // ---------- Vẽ laser + cần câu ----------
   const dot = $('#laser'), wandSvg = $('#wand');
+  const NS = 'http://www.w3.org/2000/svg', mk = (tag, attrs) => { const el = document.createElementNS(NS, tag); for (const k in attrs) el.setAttribute(k, attrs[k]); wandSvg.appendChild(el); return el; };
+  const W_ = { rod: mk('line', { stroke: '#d98bb0', 'stroke-linecap': 'round' }), grip: mk('line', { stroke: '#f4f1ec', 'stroke-linecap': 'round', style: 'filter:drop-shadow(0 1px 1px #0005)' }),
+    str: mk('line', { stroke: '#666', 'stroke-width': 1 }), knot: mk('circle', { fill: '#e3b33a' }), g: mk('g', {}) };
+  W_.img = document.createElementNS(NS, 'image'); W_.img.setAttribute('href', 'assets/feather.svg'); W_.g.appendChild(W_.img);
+  const setA = (el, o) => { for (const k in o) el.setAttribute(k, o[k]); };
   const wand = { fx: innerWidth / 2, fy: innerHeight / 2, vx: 0, vy: 0, tx: innerWidth / 2, ty: innerHeight / 2, init: false };
   let trailT = 0;
   function drawToys(now, dt) {
@@ -630,12 +675,12 @@
       // cán thẳng: tay cầm ở phía dưới-bên cạnh, chĩa chéo lên tới đầu cần (con trỏ)
       const hx = wand.tx + side * 150 * k, hy = wand.ty + 210 * k, gx = wand.tx + side * 118 * k, gy = wand.ty + 165 * k;
       const ang = Math.atan2(wand.fx - wand.tx, wand.fy - wand.ty) * -180 / Math.PI, fs = 46 * k;
-      wandSvg.innerHTML = `
-        <line x1="${wand.tx}" y1="${wand.ty}" x2="${hx}" y2="${hy}" stroke="#d98bb0" stroke-width="${2.6 * k}" stroke-linecap="round"/>
-        <line x1="${gx}" y1="${gy}" x2="${hx}" y2="${hy}" stroke="#f4f1ec" stroke-width="${7 * k}" stroke-linecap="round" style="filter:drop-shadow(0 1px 1px #0005)"/>
-        <line x1="${wand.tx}" y1="${wand.ty}" x2="${wand.fx}" y2="${wand.fy}" stroke="#666" stroke-width="1"/>
-        <circle cx="${wand.fx}" cy="${wand.fy}" r="${2.5 * k}" fill="#e3b33a"/>
-        <g transform="translate(${wand.fx},${wand.fy}) rotate(${ang + 135})"><image href="assets/feather.svg" x="${-fs * 0.1}" y="${-fs * 0.84}" width="${fs}" height="${fs}"/></g>`;
+      setA(W_.rod, { x1: wand.tx, y1: wand.ty, x2: hx, y2: hy, 'stroke-width': 2.6 * k });
+      setA(W_.grip, { x1: gx, y1: gy, x2: hx, y2: hy, 'stroke-width': 7 * k });
+      setA(W_.str, { x1: wand.tx, y1: wand.ty, x2: wand.fx, y2: wand.fy });
+      setA(W_.knot, { cx: wand.fx, cy: wand.fy, r: 2.5 * k });
+      W_.g.setAttribute('transform', `translate(${wand.fx},${wand.fy}) rotate(${ang + 135})`);
+      if (W_.fs !== fs) { W_.fs = fs; setA(W_.img, { x: -fs * 0.1, y: -fs * 0.84, width: fs, height: fs }); }
       const sp = Math.hypot(ptr.vx, ptr.vy);
       if (sp > 700) sfx(pick(['rustle1', 'rustle2']), Math.min(0.9, sp / 2500), 1, 350);
     } else wand.init = false;
@@ -678,14 +723,14 @@
     if (p.zone === 'head' && p.moved) return;                   // vừa vuốt xong
     if (p.zone && (tool === 'hand' || tool === 'treat' || cat.pose === 'lie' || cat.pose === 'belly')) touchCat(e.clientX, e.clientY, p.zone);
   });
-  addEventListener('contextmenu', (e) => e.preventDefault());
+  addEventListener('contextmenu', (e) => { e.preventDefault(); if (tool !== 'hand') setTool('hand'); });
 
   // ---------- UI ----------
   function setTool(t) {
     tool = t; document.querySelectorAll('[data-tool]').forEach((b) => b.classList.toggle('on', b.dataset.tool === t));
     document.body.dataset.tool = t; document.body.dataset.cur = '';
     cat.wantFloor = t === 'laser' || t === 'feather'; cat.noticed = false;
-    if (cat.mode === 'idle') cat.idleT = cat.idleDur;
+    if (t === 'feather') hurry(); else if (cat.mode === 'idle') cat.idleT = cat.idleDur;
   }
   document.querySelectorAll('[data-tool]').forEach((b) => b.addEventListener('click', () => setTool(b.dataset.tool)));
   addEventListener('keydown', (e) => { if (e.target.tagName === 'INPUT') return; const m = { 1: 'hand', 2: 'feather' }[e.key]; if (m) setTool(m); });
@@ -715,7 +760,12 @@
     if (d.moved) { assist.classList.remove('drag'); fabPos = { side: ev.clientX > innerWidth / 2 ? 1 : 0, y: Math.max(0, Math.min(ev.clientY - FS / 2, innerHeight - FS)) / innerHeight }; placeFab(); try { localStorage.setItem('kitten2-fab', JSON.stringify(fabPos)); } catch (_) {} wake(); }
     else { assist.classList.toggle('open'); wake(); closeLater(6000); }
   });
-  menu.addEventListener('click', (ev) => { wake(); closeLater(ev.target.closest('#skip') ? 0 : 2500); });
+  menu.addEventListener('click', () => { wake(); closeLater(2500); });
+  $('#treatBtn').addEventListener('click', () => {
+    if (!blocking) return;
+    const W = catW(), x = clamp(cat.px + (cat.dir || 1) * W * rnd(0.3, 0.55), 50, innerWidth - 50);
+    dropTreat(x, Math.max(40, (cat.floor ? cat.shelfY : HV()) - catH() * 1.4));
+  });
   assist.addEventListener('pointerenter', wake);
 
   // Cửa sổ trong suốt trên desktop: chuột xuyên qua, chỉ bắt chuột khi trỏ vào mèo / nút nổi / đang dùng cần câu
@@ -735,7 +785,7 @@
       blocking = true; dim.classList.add('on'); bubble.classList.add('on'); document.body.classList.add('blocking'); if (state.music) musicOn(true); meow(true);
       session = { pets: 0, catches: 0, treats: 0, belly: 0 }; treatsLeft = 3; renderTreat(); cat.wantFloor = true;
       // mèo chạy từ mép màn hình vào giữa
-      const fromLeft = Math.random() < 0.5; cat.exit = false; cat.enter = true; cat.edge = 0; cat.angle = 0; cat.turnA = null; cat.jump = null;
+      const fromLeft = Math.random() < 0.5; cat.exit = false; cat.enter = true; cat.edge = 0; cat.floor = 0; cat.angle = 0; cat.turnA = null; cat.jump = null;
       cat.scale = PLAY();
       cat.u = fromLeft ? -catW() * 0.5 : innerWidth + catW() * 0.5; cat.px = cat.u; cat.py = HV(); cat.dir = fromLeft ? 1 : -1; cat.started = true;
       startWalk(cat.dir, true);
@@ -750,10 +800,9 @@
     if (A.master) A.master.gain.value = state.volume;
   }
   S.on(applyState); applyState(state); renderBond(); renderTreat();
-  $('#skip').addEventListener('click', () => S.skipBreak());
   addEventListener('pointerdown', () => audio(), { capture: true });
   addEventListener('keydown', () => audio(), { capture: true });
 
-  window.K2 = { cat, clips, variants, play, setPose, setTool, ACT, get tool() { return tool; }, sfx, hearts, probeCat, zoneAt, ptr, wand, treats, dropTreat, turnTo, bond, target };
+  window.K2 = { hopLevel, cat, clips, variants, play, setPose, setTool, ACT, get tool() { return tool; }, sfx, hearts, probeCat, zoneAt, ptr, wand, treats, dropTreat, turnTo, bond, target };
   loadAll().then(() => requestAnimationFrame(tick)).catch((e) => { $('#loading').textContent = 'Lỗi tải clip: ' + e.message; });
 })();

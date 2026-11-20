@@ -1,5 +1,5 @@
 // Service worker: cache toàn bộ (kể cả clip) để chạy offline; hỗ trợ Range cho <video>.
-const V = 'kitten2-v2';
+const V = 'kitten2-v3';
 const SOUNDS = ['meow1', 'meow2', 'meow3', 'meow4', 'meow5', 'purr', 'scratch', 'hiss', 'chirp1', 'chirp2', 'trill1', 'trill2', 'thump', 'swish1', 'swish2', 'rustle1', 'rustle2', 'music'];
 const CORE = ['./', 'index.html', 'engine.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'favicon.png', 'assets/feather.svg', 'clips/manifest.json'];
 self.addEventListener('install', (e) => {

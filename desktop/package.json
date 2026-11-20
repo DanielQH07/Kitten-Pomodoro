@@ -1,6 +1,6 @@
 {
   "name": "kitten-pomodoro-desktop",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Mèo trắng chặn màn hình trong 5 phút nghỉ Pomodoro (bản desktop).",
   "main": "main.js",
   "author": "Kitten Pomodoro",

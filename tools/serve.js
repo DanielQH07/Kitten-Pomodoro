@@ -1,7 +1,7 @@
 // Server tĩnh nhỏ (có hỗ trợ Range cho video):  node tools/serve.js  ->  http://localhost:8765/kitten2/
 const http = require('http'), fs = require('fs'), path = require('path');
 const root = path.join(__dirname, '..');
-const types = { '.html': 'text/html;charset=utf-8', '.js': 'text/javascript', '.json': 'application/json', '.webp': 'image/webp', '.png': 'image/png',
+const types = { '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json', '.html': 'text/html;charset=utf-8', '.js': 'text/javascript', '.json': 'application/json', '.webp': 'image/webp', '.png': 'image/png',
   '.webm': 'video/webm', '.mp3': 'audio/mpeg', '.css': 'text/css' };
 http.createServer((q, r) => {
   let rel = decodeURIComponent(q.url.split('?')[0]); if (rel.endsWith('/')) rel += 'index.html';
