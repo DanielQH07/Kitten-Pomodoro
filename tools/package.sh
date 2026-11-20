@@ -7,5 +7,5 @@ set -e
 cd "$(dirname "$0")/.."
 mkdir -p dist; rm -f dist/kitten-pomodoro-extension.zip dist/kitten-pomodoro-web.zip
 (cd extension && tar -a -c -f ../dist/kitten-pomodoro-extension.zip manifest.json background.js content.js popup.html popup.js icons sprites sounds)
-(cd kitten2 && tar -a -c -f ../dist/kitten-pomodoro-web.zip index.html engine.js sw.js manifest.webmanifest icon-192.png icon-512.png assets clips sounds)
+(cd kitten2 && tar -a -c -f ../dist/kitten-pomodoro-web.zip index.html engine.js sw.js manifest.webmanifest icon-192.png icon-512.png favicon.png assets clips sounds)
 echo "OK: dist/kitten-pomodoro-extension.zip + dist/kitten-pomodoro-web.zip"
