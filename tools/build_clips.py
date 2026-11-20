@@ -157,6 +157,11 @@ if os.path.exists(vs) and manifest.get('scratch', {}).get('src', 'cat_scratch.mp
     srcs['scratch'] = vs; a, b = 0, 91                     # 0-3.8 s: quay sang nhìn, cào, quay lại đứng
     manifest['scratch'] = {'start': 'stand_right', 'end': 'stand_right', 'frames': b - a + 1, 'dur': round((b - a + 1) / 24, 3), 'src': 'cat_scratch.mp4', 'trim': [a, b], 'cues': auto_cues('scratch', m, a)}
     if FORCE or not os.path.exists(os.path.join(OUT, 'scratch.webm')): jobs.append(('scratch', vs, a, b, OLD))
+# meme (hành động ngẫu nhiên): mèo đi vài bước rồi ngồi xuống kiểu meme (clip cũ do Gemini tạo)
+vm = os.path.join(ROOT, 'Video', 'cat_walk_sit_meme.mp4')
+if os.path.exists(vm) and manifest.get('meme', {}).get('src', 'cat_walk_sit_meme.mp4') == 'cat_walk_sit_meme.mp4':
+    add('meme', vm, {'start': 'stand_right', 'end': 'sit_front'}, OLD)
+    manifest['meme']['walk_sec'] = 3.8      # trước giây này mèo đang bước đi (engine cho mèo trượt theo)
 if manifest.get('turn', {}).get('src') == 'cat_turn.mp4': manifest.pop('turn')
 
 with ThreadPoolExecutor(3) as ex:

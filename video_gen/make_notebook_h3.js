@@ -115,12 +115,12 @@ import glob
 f = sorted(glob.glob(OUT + "/*.mp4")); print(f)
 if f: display(Video(f[-1], embed=True, width=720))`),
 
-  md(`## 8. Chạy cả loạt v2 (13 clip)
+  md(`## 8. Các clip còn lại (batch later: walk, run, turn, sleep, lie_down, belly_roll, belly_return) — chỉ chạy khi cần
 - Bản "quay xa" (mèo nhỏ hơn trong khung) của các clip nhảy/vồ/với cao để không bị cắt mép: pounce, reach_up, swat, land, lie_down, belly_roll, belly_return, catch_bite.
 - Hành động mới: walk (đi bộ lặp), run (phi liên tục), turn (quay đầu), eat (ăn bánh), sleep (ngủ lặp).
 - Kết quả: 1 thư mục, mỗi hành động 1 file \`<tên>.mp4\`; \`--variants 2\` thêm bản thứ 2 \`<tên>_b.mp4\`. Không lưu khung hình.
 - Muốn 8 clip quan trọng trước: thêm \`--priority 1\`. Clip có file rồi sẽ tự bỏ qua (\`--force\` để chạy lại).`),
-  code(`!python /content/video_gen/comfy_batch.py --backend h3local --quality {QUALITY} --variant {MODEL_VARIANT} --out {OUT} --flat --batch v2 --variants 2`),
+  code(`!python /content/video_gen/comfy_batch.py --backend h3local --quality {QUALITY} --variant {MODEL_VARIANT} --out {OUT} --flat --batch later --variants 2`),
 
   md(`## 9. Nén thành 1 file zip để tải về
 Tải \`kitten_video_h3_v2.zip\` trong Drive, giải nén vào \`video_gen/output/v2/\` của dự án, rồi chạy

@@ -307,7 +307,16 @@
         move: (t) => { const p = clamp(t / dur, 0, 1), e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2; cat.u = u0 + dist * e;
           if (t - lastDust > 0.18 && p > 0.1 && p < 0.9) { lastDust = t; const [x, y] = feetScreen(); dust(x - cat.dir * catW() * 0.3, y, 2, -cat.dir); } } });
     },
-    eat: (onEat) => clips.eat ? play('eat', { cues: [[clips.eat.dur * 0.35, () => { sfx(pick(['trill1', 'trill2']), 0.7); onEat && onEat(); }]] }) : ACT.bite(onEat),
+    // ăn: mèo đứng cúi xuống ăn (clip eat); chưa có clip thì ngồi xuống rồi ngoạm
+    eat: (onEat) => clips.eat ? play('eat', { cues: [[clips.eat.dur * 0.35, () => { sfx(pick(['trill1', 'trill2']), 0.7); onEat && onEat(); }]] })
+      : ACT.standToSit(() => ACT.bite(onEat)),
+    // meme (hành động ngẫu nhiên): đi vài bước rồi ngồi xuống như trong clip meme
+    meme: () => {
+      const c = clips.meme; if (!c) return ACT.standToSit();
+      const ws = c.meta.walk_sec || 3.8, sp = SPEED * Math.pow(cat.scale / ROAM, 0.6); let lt = 0;
+      play('meme', { move: (t) => { const d = Math.max(0, Math.min(t, ws) - lt); lt = Math.min(t, ws);
+        const W = catW(), lo = Math.min(W * 0.36, innerWidth / 2); cat.u = clamp(cat.u + cat.dir * sp * d, lo, innerWidth - lo); } });
+    },
     bellyRoll: () => play('belly_roll', { cues: [[cue('belly_roll', 'thump', 0.45), () => sfx('thump', 0.5)], [1.5, () => mood('💗', 1500)]] }),
     bellyKick: (n = 2) => { let k = 0; const go = () => play('belly_kick', { onend: () => { if (++k < n) go(); else setPose('belly'); }, cues: [[0.2, () => meow(false)]] }); go(); },
     bellyReturn: () => play('belly_return'),
@@ -348,12 +357,11 @@
     const dx = tg.x - cat.px, adx = Math.abs(dx), face = Math.sign(dx) || cat.dir, W = catW();
     const rel = (cat.py - tg.y) / catH(), feather = tg.kind === 'feather', moving = now_() - ptr.t < 600;
     if (!cat.noticed) { cat.noticed = true; mood('❗', 900); sfx(pick(['chirp1', 'chirp2']), 0.7, 1, 3000); }
-    if (tg.kind === 'treat') {
-      if (cat.pose === 'sit') { if (adx < W * 0.45) { ACT.eat(eatTreat); return true; } ACT.sitToStand(); return true; }
+    if (tg.kind === 'treat') {            // đi bộ tới chỗ cá rồi cúi xuống ăn
+      if (cat.pose === 'sit') { ACT.sitToStand(); return true; }
       if (face !== cat.dir && adx > W * 0.15) { turnTo(face); return true; }
-      if (adx > W * 2) { ACT.run(tg.x - face * W * 0.3); return true; }
-      if (adx > W * 0.4) { startWalk(face, true); return true; }
-      ACT.standToSit(() => ACT.eat(eatTreat)); return true;
+      if (adx > W * 0.4) { startWalk(face, adx > W * 1.8); return true; }
+      ACT.eat(eatTreat); return true;
     }
     if (cat.energy < 20 && now_() > cat.restUntil) {     // mệt: nằm nghỉ, xoa đầu cho mau lại sức
       cat.restUntil = now_() + 15000; mood('💤', 2000); toast('Mèo mệt rồi, xoa đầu cho mèo nghỉ chút nhé 💤', 2600);
@@ -411,7 +419,7 @@
       weighted([[here ? 0 : 50, () => startWalk(Math.random() < 0.5 ? 1 : -1)], [here ? 35 : 12, () => ACT.standToSit(() => meow(here))],
         [here ? 8 : 5, () => ACT.lieDown()], [7, ACT.headbutt], [5, ACT.reach], [8, () => ACT.crouchPounce(null)],
         [here ? 0 : 6, () => { turnTo(-cat.dir); setPose('stand'); }],
-        [cat.energy > 60 ? 4 : 0, () => ACT.zoomies(here ? 2 : 3)], [here && idleUser ? 10 : 0, askAttention]]);
+        [clips.meme ? 5 : 0, ACT.meme], [cat.energy > 60 ? 4 : 0, () => ACT.zoomies(here ? 2 : 3)], [here && idleUser ? 10 : 0, askAttention]]);
     } else if (cat.pose === 'sit') {
       weighted([[26, ACT.groom], [14, ACT.watch], [8, ACT.swat], [5, () => ACT.bite()], [here ? 6 : 24, () => ACT.sitToStand()], [18, () => setPose('sit')],
         [here && idleUser ? 12 : 0, askAttention]]);

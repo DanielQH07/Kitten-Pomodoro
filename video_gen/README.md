@@ -45,8 +45,8 @@ Clip lặp (`run`) dùng `sprite_start` và `sprite_sec` để chỉ cắt đo�
 
 ### Bộ v2 (13 clip, kết quả là 1 thư mục video theo tên hành động)
 - `python video_gen/make_wide_refs.py` tạo `refs/wide/`: mèo thu nhỏ còn 72% quanh điểm chân, đặt trên nền xanh phẳng, để clip nhảy/vồ/với cao không bị cắt mép. Engine phóng to lại (`zoom = 1/0.72`) nên khớp với các clip cũ.
-- Clip v2 trong `clips.json` có `"batch": "v2"`, `"name"` (tên hành động) và `"ref_scale": 0.72`: pounce, reach_up, swat, land, walk, run, turn, eat (priority 1); sleep, lie_down, belly_roll, belly_return, catch_bite (priority 2).
-- Notebook (ô 8): `comfy_batch.py --flat --batch v2 --variants 2` lưu `OUT/<tên>.mp4` và `OUT/<tên>_b.mp4`, không lưu khung hình; ô 9 nén thành zip.
+- Clip v2 trong `clips.json` (batch `fix` = 6 clip bị cắt khung + ăn, notebook `colab_h3_fix.ipynb`; batch `later` = các clip còn lại), `"name"` (tên hành động) và `"ref_scale": 0.72`: pounce, reach_up, swat, land, walk, run, turn, eat (priority 1); sleep, lie_down, belly_roll, belly_return, catch_bite (priority 2).
+- Notebook (ô 8): `comfy_batch.py --flat --batch later --variants 2` lưu `OUT/<tên>.mp4` và `OUT/<tên>_b.mp4`, không lưu khung hình; ô 9 nén thành zip.
 - Đưa vào bản xem thử: giải nén vào `video_gen/output/v2/` rồi `python tools/build_clips.py video_gen/output/v2 kitten2/clips` (thay các clip cùng tên).
 
 ## 2b. Phương án dự phòng: Wan 2.2 trên Colab L4
