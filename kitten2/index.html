@@ -8,7 +8,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <script>document.documentElement.dataset.mode=new URLSearchParams(location.search).get("mode")||"web"</script>
-<title>Kitten Pomodoro v2 — bản xem thử</title>
+<title>Kitten Pomodoro</title>
 <style>
   *{box-sizing:border-box}
   :root{--hand:url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'40'%20height%3D'40'%20viewBox%3D'0%200%2040%2040'%3E%3Cg%20transform%3D'rotate(0%2020%2020)'%3E%3Ctext%20x%3D'4'%20y%3D'32'%20font-size%3D'30'%3E%F0%9F%96%90%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fsvg%3E") 14 14;--hand2:url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'40'%20height%3D'40'%20viewBox%3D'0%200%2040%2040'%3E%3Cg%20transform%3D'rotate(-20%2020%2020)'%3E%3Ctext%20x%3D'4'%20y%3D'32'%20font-size%3D'30'%3E%F0%9F%96%90%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fsvg%3E") 14 14}
@@ -94,7 +94,12 @@
   #bondBox .bl{display:flex;justify-content:space-between;font-size:14px;color:#6a564e}
   #bondBox .bar{height:8px;margin:6px 0 4px;border-radius:5px;background:#f3e4db;overflow:hidden}
   #pBar{height:100%;width:0;background:linear-gradient(90deg,#f4a9a0,#ef6f8e);border-radius:5px;transition:width .5s}
-  #bondBox small{font-size:11.5px}
+  #bondBox details{margin-top:2px;font-size:12px;color:#8a6e62}
+  #bondBox summary{cursor:pointer;list-style:none;font-size:12px;color:#a07a6a;user-select:none}
+  #bondBox summary::-webkit-details-marker{display:none}
+  #bondBox summary::after{content:" ▾"}#bondBox details[open] summary::after{content:" ▴"}
+  #bondBox ul{margin:6px 0 2px;padding-left:18px;line-height:1.6}
+  .tagline{font-size:14px;color:#a07a6a;max-width:360px}
   main small.credit{font-size:11px;opacity:.8;margin-top:auto;padding-bottom:12px}
   /* ---------- chế độ cửa sổ: web (mặc định) | overlay (cửa sổ trong suốt trên desktop) | panel (cửa sổ cài đặt) ---------- */
   html[data-mode=overlay],html[data-mode=overlay] body{background:transparent}
@@ -120,9 +125,17 @@
   <div id="bondBox">
     <div class="bl"><b>❤ Độ thân thiết <span id="pLv">Lv 1</span></b><span id="pXp">0 / 8 điểm</span></div>
     <div class="bar"><div id="pBar"></div></div>
-    <small>Xoa đầu +1 · cho ăn bánh +2 · mèo bắt được lông +3. Lv càng cao mèo càng tin bạn (Lv 2: xoa nhiều mèo nằm ngửa cho xoa bụng).</small>
+    <details>
+      <summary>Cách tăng điểm</summary>
+      <ul>
+        <li>🖐 Xoa đầu: +1</li>
+        <li>🐟 Cho ăn bánh: +2</li>
+        <li>🪶 Mèo vồ trúng lông: +3</li>
+        <li>Lv 2: xoa nhiều, mèo nằm ngửa cho xoa bụng</li>
+      </ul>
+    </details>
   </div>
-  <small>Hết giờ làm, mèo xuất hiện trên màn hình trong giờ nghỉ, bạn vẫn làm việc được. Chạm nút 🐾 để chọn bàn tay, cần câu hoặc thả bánh; chuột phải để quay về bàn tay.</small>
+  <div class="tagline">Làm chăm chỉ đi, giờ nghỉ có mèo ghé chơi 🐾</div>
   <small class="credit">Nhạc: Lukrembo – Bread (freetouse.com) · Lông: Twemoji (CC-BY 4.0)</small>
 </main>
 
