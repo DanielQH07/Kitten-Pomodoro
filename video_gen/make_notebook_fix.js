@@ -12,7 +12,7 @@ const cells = [
 Chạy **MiniMax H3** mã nguồn mở (\`Comfy-Org/MiniMax-H3\`) trong ComfyUI, khung đầu + khung cuối, nền xanh, rồi gọi \`video_gen/comfy_batch.py\` chạy hàng loạt clip trong \`clips.json\`.
 Prompt được dựng theo định dạng có cấu trúc + timeline giống notebook mẫu (subject_definitions / summary / retention_analysis / detailed_description).
 
-- Runtime → Change runtime type → **A100 GPU**.
+- Runtime → Change runtime type → **A100 GPU** (nên) hoặc **L4** (chạy được nhưng chậm hơn, xem ô cấu hình: tự bật chế độ tiết kiệm VRAM + độ phân giải 896×512).
 - Model lưu ở Drive (\`ComfyUI_H3_models\`) nên các phiên sau không phải tải lại.
 - Mặc định 1344×768, 24fps, \`quality = "full"\` (20 bước). Muốn nhanh hơn: \`"turbo"\` (LoRA 8-step, 6 bước).`),
 
@@ -21,9 +21,9 @@ Prompt được dựng theo định dạng có cấu trúc + timeline giống no
 print(subprocess.check_output(["nvidia-smi", "--query-gpu=name,memory.total,driver_version", "--format=csv,noheader"], text=True))
 print("PyTorch:", torch.__version__, "| CUDA:", torch.version.cuda, "| available:", torch.cuda.is_available())
 if not torch.cuda.is_available():
-    raise RuntimeError("Chưa bật GPU: Runtime > Change runtime type > A100 GPU.")
+    raise RuntimeError("Chưa bật GPU: Runtime > Change runtime type > A100 hoặc L4.")
 name = torch.cuda.get_device_name(0)
-print("OK:", name) if "A100" in name else print("CẢNH BÁO: runtime là", name, "không phải A100.")
+print("OK:", name) if "A100" in name else print("CHÚ Ý: runtime là", name, "- dùng chế độ GPU yếu (xem ô cấu hình). Có thể mất nhiều thời gian hơn A100.")
 !apt-get -qq install -y ffmpeg > /dev/null`),
 
   md(`## 2. Cấu hình + Google Drive + mã nguồn
@@ -37,7 +37,13 @@ drive.mount("/content/drive")
 SOURCE = "github"          # "github" | "drive"
 REPO = "https://github.com/DanielQH07/Kitten-Pomodoro.git"
 MODEL_VARIANT = "int8"     # "int8" | "fp8"
-QUALITY = "full"           # "full" | "turbo"
+QUALITY = "full"           # "full" | "turbo"  (turbo: 6 bước, nhanh hơn nhiều, hơi kém nét)
+import torch
+LOW_VRAM = torch.cuda.get_device_properties(0).total_memory < 30e9    # L4 (24GB) / T4: True; A100: False
+RES = "896x512" if LOW_VRAM else ""      # L4: giảm độ phân giải để đủ VRAM; muốn ép: RES = "1344x768"
+if LOW_VRAM and QUALITY == "full": print("Gợi ý: GPU yếu nên thử QUALITY = 'turbo' để chạy nhanh hơn.")
+RES_ARG = f"--resolution {RES}" if RES else ""
+print("LOW_VRAM:", LOW_VRAM, "| RES:", RES or "mặc định 1344x768")
 
 COMFY_ROOT = "/content/ComfyUI"
 DRIVE_MODEL_ROOT = "/content/drive/MyDrive/ComfyUI_H3_models"
@@ -93,7 +99,7 @@ Nếu lỗi hết VRAM thử \`QUALITY = "turbo"\` hoặc thêm \`"--lowvram"\` 
   code(`import subprocess, time, urllib.request
 log = open("/content/comfyui.log", "w")
 server = subprocess.Popen(
-    ["python", "main.py", "--listen", "127.0.0.1", "--port", "8188", "--disable-auto-launch"],
+    ["python", "main.py", "--listen", "127.0.0.1", "--port", "8188", "--disable-auto-launch"] + (["--lowvram"] if LOW_VRAM else []),
     cwd=COMFY_ROOT, stdout=log, stderr=subprocess.STDOUT)
 for i in range(180):
     try:
@@ -108,14 +114,14 @@ else:
 !python /content/video_gen/comfy_batch.py --backend h3local --list`),
 
   md('## 7. Chạy thử 1 clip: swat_w (ngắn nhất)\nKết quả lưu thẳng OUT/swat.mp4. Xem ở ô sau rồi mới chạy cả loạt.'),
-  code(`!python /content/video_gen/comfy_batch.py --backend h3local --quality {QUALITY} --variant {MODEL_VARIANT} --out {OUT} --flat --only swat_w`),
+  code(`!python /content/video_gen/comfy_batch.py --backend h3local --quality {QUALITY} --variant {MODEL_VARIANT} --out {OUT} --flat --only swat_w {RES_ARG}`),
   code(`from IPython.display import Video, display
 import glob
 f = sorted(glob.glob(OUT + "/*.mp4")); print(f)
 if f: display(Video(f[-1], embed=True, width=720))`),
 
   md('## 8. Chạy 6 clip cần gen lại (batch fix)\nChỉ các clip mà mèo bị mất cảnh vì vượt ra ngoài khung, dùng ảnh tham chiếu "quay xa" (mèo nhỏ 72%, nhiều khoảng trống trên đầu):\n- pounce (vồ), reach_up (với cao), swat (vả khi ngồi), land (rơi xuống tiếp đất nhanh), catch_bite (chụp mồi)\n- eat: mèo đi tới rồi cúi xuống ăn (đứng nguyên)\n- Mỗi clip 1 seed, lưu <tên>.mp4.'),
-  code(`!python /content/video_gen/comfy_batch.py --backend h3local --quality {QUALITY} --variant {MODEL_VARIANT} --out {OUT} --flat --batch fix`),
+  code(`!python /content/video_gen/comfy_batch.py --backend h3local --quality {QUALITY} --variant {MODEL_VARIANT} --out {OUT} --flat --batch fix {RES_ARG}`),
 
   md('## 9. Nén thành 1 file zip để tải về\nTải kitten_video_h3_fix.zip trong Drive, giải nén vào video_gen/output/fix/ của dự án rồi chạy\npython tools/build_clips.py video_gen/output/fix kitten2/clips'),
   code(`import shutil; print(shutil.make_archive(OUT, "zip", OUT))`),

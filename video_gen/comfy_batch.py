@@ -378,6 +378,7 @@ def main():
     ap.add_argument("--variant", choices=["int8", "fp8"], help="ghi đè backends.h3local.variant (A100: int8)")
     ap.add_argument("--only", help="id clip, cách nhau dấu phẩy")
     ap.add_argument("--priority", type=int, help="chỉ chạy clip có priority <= N")
+    ap.add_argument("--resolution", help="ghi đè độ phân giải h3local, vd 896x512 (GPU yếu như L4; bội số của 32, giữ tỉ lệ 7:4)")
     ap.add_argument("--batch", help="chỉ chạy clip có \"batch\" này (vd v2)")
     ap.add_argument("--flat", action="store_true", help="lưu thẳng <out>/<tên hành động>.mp4 (bản 2: _b.mp4), không lưu khung hình")
     ap.add_argument("--variants", type=int, default=1, help="số seed khác nhau cho mỗi clip")
@@ -398,6 +399,8 @@ def main():
         cfg["backends"]["h3local"]["quality"] = args.quality
     if args.variant:
         cfg["backends"]["h3local"]["variant"] = args.variant
+    if args.resolution:
+        cfg["backends"]["h3local"]["resolution"] = [int(v) for v in args.resolution.lower().split("x")]
     clips = select_clips(cfg, args)
 
     if args.list:
