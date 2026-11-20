@@ -1,0 +1,15 @@
+{
+  "name": "kitten-pomodoro-android",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Vỏ Android (Capacitor) cho bản web kitten2/",
+  "scripts": {
+    "sync-web": "node sync.js",
+    "build": "node sync.js && npx cap sync android && node patch.js && cd android && gradlew.bat assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/cli": "^6.1.2",
+    "@capacitor/core": "^6.1.2"
+  }
+}

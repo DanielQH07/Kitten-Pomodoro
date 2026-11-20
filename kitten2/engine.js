@@ -4,6 +4,8 @@
   const FW = 1344, FH = 768, AX = 580, FEET = 716;           // khung clip; điểm neo (giữa thân, chân) trong khung
   const CAT_LEN = 940, CAT_H = 536;                          // thân mèo đứng (px trong khung)
   const SMALL = Math.min(innerWidth, innerHeight) < 600;
+  const uiBar = document.querySelector('.ui');
+  const BOT = () => { const r = uiBar.getBoundingClientRect(); return r.top > innerHeight / 2 ? innerHeight - r.top + 4 : 0; }, HV = () => innerHeight - BOT();      // thanh công cụ nằm ở đáy (điện thoại dọc): chừa chỗ cho mèo đứng phía trên
   const ROAM = (SMALL ? 0.22 : 0.3) * 1.15, SPEED = 95;      // to hơn bản trước 15%
   const EDGE_ANGLE = { 0: 0, 1: -90, 3: 90 };
   const POSE_OF = { stand_right: 'stand', stand_left: 'stand', sit_front: 'sit', lie_side: 'lie', belly_up: 'belly', held: 'held', walk: 'stand' };
@@ -97,9 +99,10 @@
   const mkLayer = (el) => { el.className = 'layer'; el.style.opacity = 0; catEl.appendChild(el); return el; };
   async function loadAll() {
     const man = await (await fetch('clips/manifest.json')).json();
+    const pending = [];
     for (const [id, m] of Object.entries(man)) {
       const v = mkLayer(document.createElement('video'));
-      v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = SMALL ? 'metadata' : 'auto'; v.src = `clips/${id}.webm`;
+      v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'auto'; pending.push([v, `clips/${id}.webm`]);
       if (m.zoom && m.zoom !== 1) { v.style.transformOrigin = `${AX}px ${FEET}px`; v.style.transform = `scale(${m.zoom})`; }
       clips[id] = { id, meta: m, el: v, dur: m.dur, zoom: m.zoom || 1, from: POSE_OF[m.start] || 'stand', to: POSE_OF[m.end] || 'stand' };
       const base = m.variant_of || id; (variants[base] = variants[base] || []).push(id);
@@ -107,6 +110,14 @@
     for (const [name, file] of Object.entries(POSE_IMG)) {
       const i = mkLayer(new Image()); i.src = `clips/pose_${file}.webp`; i.classList.add('pose'); posesImg[name] = i;
     }
+    // Tải trọn từng clip thành blob (không giữ 36 kết nối mở, tua tức thì, chạy tốt cả trên điện thoại)
+    let done = 0; const queue = pending.slice();
+    await Promise.all(Array.from({ length: 6 }, async () => {
+      for (let it; (it = queue.shift());) {
+        try { it[0].src = URL.createObjectURL(await (await fetch(it[1])).blob()); } catch (err) { it[0].src = it[1]; }
+        $('#loading').textContent = `Đang tải clip ${++done}/${pending.length}…`;
+      }
+    }));
     $('#loading').textContent = '';
   }
   const vid = (id) => pick(variants[id] || [id]);        // chọn ngẫu nhiên 1 trong các bản (seed) của clip
@@ -346,7 +357,7 @@
   // ---------- Đồ chơi: laser / cần câu / bánh thưởng ----------
   const toyActive = () => (tool === 'laser' || tool === 'feather') && ptr.inside && now_() - ptr.t < (ptr.touch ? 6000 : 5000);
   function target() {
-    if (treats.length) { const t = treats[0]; return { x: t.x, y: innerHeight - 10, kind: 'treat' }; }
+    if (treats.length) { const t = treats[0]; return { x: t.x, y: HV() - 10, kind: 'treat' }; }
     if (!toyActive()) return null;
     if (tool === 'laser') return { x: ptr.x, y: ptr.y, kind: 'laser' };
     return { x: wand.fx, y: wand.fy, kind: 'feather' };
@@ -489,7 +500,7 @@
   // ---------- Vòng lặp ----------
   function wantScale(vw, vh) {
     if (!blocking || cat.edge !== 0) return ROAM;
-    const bs = Math.min(vw * 0.92 / CAT_LEN, vh * 0.95 / FH);
+    const bs = Math.min(vw * (SMALL ? 0.7 : 0.92) / CAT_LEN, vh * 0.95 / FH);
     if (target() || tool !== 'hand' || cat.zoom) return Math.min(bs, Math.max(ROAM * 1.45, bs * 0.55));    // lúc chơi: nhỏ lại để chạy khắp màn hình
     return bs;
   }
@@ -497,7 +508,7 @@
     const dt = Math.min(0.1, (now - lastT) / 1000); lastT = now;
     requestAnimationFrame(tick);
     if (!clips.walk || !posesImg.stand) return;
-    const vw = innerWidth, vh = innerHeight;
+    const vw = innerWidth, vh = HV();
     const visible = blocking || cat.exit;
     catEl.style.display = shadow.style.display = visible ? '' : 'none';
     if (!visible) { moodEl.style.opacity = 0; drawToys(now, dt); return; }
@@ -687,8 +698,8 @@
       session = { pets: 0, catches: 0, treats: 0, belly: 0 }; treatsLeft = 3; renderTreat(); cat.wantFloor = true;
       // mèo chạy từ mép màn hình vào giữa
       const fromLeft = Math.random() < 0.5; cat.exit = false; cat.enter = true; cat.edge = 0; cat.angle = 0; cat.turnA = null; cat.jump = null;
-      cat.scale = Math.min(innerWidth * 0.92 / CAT_LEN, innerHeight * 0.95 / FH);
-      cat.u = fromLeft ? -catW() * 0.5 : innerWidth + catW() * 0.5; cat.px = cat.u; cat.py = innerHeight; cat.dir = fromLeft ? 1 : -1; cat.started = true;
+      cat.scale = Math.min(innerWidth * (SMALL ? 0.7 : 0.92) / CAT_LEN, HV() * 0.95 / FH);
+      cat.u = fromLeft ? -catW() * 0.5 : innerWidth + catW() * 0.5; cat.px = cat.u; cat.py = HV(); cat.dir = fromLeft ? 1 : -1; cat.started = true;
       startWalk(cat.dir, true);
     }
     if (!should && blocking) {

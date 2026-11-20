@@ -91,6 +91,11 @@
   #credit{position:fixed;right:14px;top:70px;z-index:21;font-size:11px;color:#a07a6a;opacity:.8}
   body.blocking #credit{color:#fff}
   .ui .t{margin-left:6px}
+  main{transition:opacity .5s}body.blocking main{opacity:0;pointer-events:none}
+  @media(max-height:500px) and (min-width:701px){
+    .ui{top:6px;right:6px;gap:4px;padding:5px}.ui .t,.ui label,.ui .sep{display:none}.ui button{padding:5px 10px}.ui .i{font-size:22px}
+    #bond{top:6px;left:6px}#bubble{top:6px;font-size:17px}main{padding-top:8px}.hint,#credit{display:none}
+  }
   @media(max-width:700px){
     main{padding-top:64px}#bubble{top:56px;font-size:19px;width:92vw}#toast{top:30vh}#credit,.hint{display:none}
     #bond{top:10px;bottom:auto;left:10px}

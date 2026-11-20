@@ -1,0 +1,7 @@
+{
+  "appId": "com.kittenpomodoro.app",
+  "appName": "Kitten Pomodoro",
+  "webDir": "www",
+  "backgroundColor": "#fff3ea",
+  "android": { "allowMixedContent": false }
+}

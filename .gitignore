@@ -26,3 +26,7 @@ tmp/
 kitten2/clips/
 kitten2/sounds/
 desktop/www/
+
+# Android (Capacitor): www là bản sao kitten2 sinh bởi android-app/sync.js
+android-app/www/
+android-app/android/local.properties
