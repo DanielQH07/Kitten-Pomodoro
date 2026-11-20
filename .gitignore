@@ -11,15 +11,6 @@ node_modules/
 *.zip
 
 # Bản sao sinh tự động (tools/package.sh, desktop/sync.js) — nguồn thật nằm ở extension/
-app/content.js
-app/sprites/
-app/sounds/
-desktop/www/content.js
-desktop/www/popup.html
-desktop/www/popup.js
-desktop/www/sprites/
-desktop/www/sounds/
-desktop/www/icons/
 
 .claude/
 
@@ -34,3 +25,4 @@ tmp/
 # Bản xem thử v2: clip WebM đã tách nền và âm thanh đã xử lý (sinh bằng tools/build_clips.py, tools/build_sounds.py)
 kitten2/clips/
 kitten2/sounds/
+desktop/www/

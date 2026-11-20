@@ -1,7 +1,7 @@
 {
   "name": "kitten-pomodoro-desktop",
-  "version": "0.2.0",
-  "description": "Mèo trắng đi quanh màn hình desktop và bắt bạn nghỉ ngơi theo Pomodoro.",
+  "version": "0.3.0",
+  "description": "Mèo trắng chặn màn hình trong 5 phút nghỉ Pomodoro (bản desktop).",
   "main": "main.js",
   "author": "Kitten Pomodoro",
   "scripts": {
@@ -14,12 +14,11 @@
     "productName": "Kitten Pomodoro",
     "files": [
       "main.js",
-      "preload.js",
       "www/**/*",
       "package.json"
     ],
     "win": {
-      "icon": "www/icons/icon256.png",
+      "icon": "www/icon-512.png",
       "target": [
         "portable",
         "nsis"

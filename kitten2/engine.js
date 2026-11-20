@@ -89,7 +89,7 @@
     if (A.purr && A.ac) A.purr.g.gain.setTargetAtTime(A.purrGain, A.ac.currentTime, 0.3);
     updatePurr();
   }
-  const musicOn = (on) => loopSound('music', 'music', on, 0.55, 3);
+  const musicOn = (on) => loopSound('music', 'music', on, 0.9, 3);
 
   // ---------- Tải clip ----------
   const clips = {}, posesImg = {}, variants = {};

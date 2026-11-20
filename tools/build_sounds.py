@@ -75,4 +75,4 @@ rs = os.path.join(S, '181774__keweldog__rustling-paper.wav')
 save('rustle1', load(rs, 2.55, 3.6, 'lowpass=f=7000'), -27, 0.03, 0.2)
 save('rustle2', load(rs, 0.95, 1.5, 'lowpass=f=7000'), -27, 0.03, 0.2)
 # --- nhạc nền nhẹ (Lukrembo - Bread, freetouse.com: cần ghi nguồn) ---
-save('music', load(os.path.join(S, 'Lukrembo - Bread (freetouse.com).mp3'), 0, 120), -30, 1.5, 3.0)
+save('music', load(os.path.join(S, 'Lukrembo - Bread (freetouse.com).mp3'), 0, 120), -21, 1.5, 3.0)

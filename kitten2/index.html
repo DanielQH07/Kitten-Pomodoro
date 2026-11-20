@@ -90,7 +90,15 @@
   #dbg:empty{display:none}
   #credit{position:fixed;right:14px;top:70px;z-index:21;font-size:11px;color:#a07a6a;opacity:.8}
   body.blocking #credit{color:#fff}
-  @media(max-width:700px){main{padding-top:96px}#bubble{top:92px;font-size:19px;width:92vw}#toast{top:30vh}#bond{top:auto;bottom:10px;left:10px}.ui{left:50%;right:auto;transform:translateX(-50%);top:8px}#credit{display:none}.ui button{font-size:13px}.ui label{display:none}.ui{gap:4px;padding:6px}.ui button{padding:8px 9px}.ui input[type=range]{width:60px}.hint{display:none}}
+  .ui .t{margin-left:6px}
+  @media(max-width:700px){
+    main{padding-top:64px}#bubble{top:56px;font-size:19px;width:92vw}#toast{top:30vh}#credit,.hint{display:none}
+    #bond{top:10px;bottom:auto;left:10px}
+    .ui{left:10px;right:10px;top:auto;bottom:calc(10px + env(safe-area-inset-bottom));transform:none;gap:6px;padding:8px;justify-content:space-between;border-radius:26px}
+    .ui button{flex:1;min-width:0;min-height:58px;padding:6px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:18px}
+    .ui .i{font-size:26px;line-height:1}.ui .t{margin:0;font-size:11px;line-height:1.1}
+    .ui label,.ui .sep{display:none}
+  }
 </style>
 </head>
 <body>
@@ -120,13 +128,13 @@
 <div class="hint" id="hint">Vuốt đầu để xoa · kéo thân để xách lên · chạm đuôi mèo sẽ cào · mèo nằm thì chạm bụng · phím 1–4 đổi công cụ</div>
 
 <div class="ui">
-  <button data-tool="hand" class="on" title="phím 1">🖐 Bàn tay</button>
-  <button data-tool="laser" title="phím 2">🔴 Laser</button>
-  <button data-tool="feather" title="phím 3">🪶 Cần câu</button>
-  <button data-tool="treat" title="phím 4: chạm xuống sàn để thả bánh">🐟 Bánh <b id="treatN">3</b></button>
+  <button data-tool="hand" class="on" title="phím 1"><span class="i">🖐</span><span class="t">Bàn tay</span></button>
+  <button data-tool="laser" title="phím 2"><span class="i">🔴</span><span class="t">Laser</span></button>
+  <button data-tool="feather" title="phím 3"><span class="i">🪶</span><span class="t">Cần câu</span></button>
+  <button data-tool="treat" title="phím 4: chạm xuống sàn để thả bánh"><span class="i">🐟</span><span class="t">Bánh <b id="treatN">3</b></span></button>
   <span class="sep"></span>
   <label>🔊 <input id="volume" type="range" min="0" max="1" step="0.05"></label>
-  <button id="music" class="sec" title="nhạc nền khi nghỉ">♪</button>
+  <button id="music" class="sec" title="nhạc nền khi nghỉ"><span class="i">♪</span><span class="t">Nhạc</span></button>
 </div>
 <div id="credit">Nhạc: Lukrembo – Bread (freetouse.com) · Lông: Twemoji (CC-BY 4.0)</div>
 <div id="loading">Đang tải clip…</div>
@@ -159,5 +167,6 @@
 })();
 </script>
 <script src="engine.js"></script>
+<script>if ("serviceWorker" in navigator && location.protocol !== "file:") addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));</script>
 </body>
 </html>
