@@ -114,8 +114,8 @@ import glob
 f = sorted(glob.glob(OUT + "/*.mp4")); print(f)
 if f: display(Video(f[-1], embed=True, width=720))`),
 
-  md('## 8. Chạy 6 clip cần gen lại (batch fix)\nChỉ các clip mà mèo bị mất cảnh vì vượt ra ngoài khung, dùng ảnh tham chiếu "quay xa" (mèo nhỏ 72%, nhiều khoảng trống trên đầu):\n- pounce (vồ), reach_up (với cao), swat (vả khi ngồi), land (rơi xuống tiếp đất nhanh), catch_bite (chụp mồi)\n- eat: mèo đi tới rồi cúi xuống ăn (đứng nguyên)\n- variants 2: mỗi clip 2 seed, bản thứ 2 lưu <tên>_b.mp4.'),
-  code(`!python /content/video_gen/comfy_batch.py --backend h3local --quality {QUALITY} --variant {MODEL_VARIANT} --out {OUT} --flat --batch fix --variants 2`),
+  md('## 8. Chạy 6 clip cần gen lại (batch fix)\nChỉ các clip mà mèo bị mất cảnh vì vượt ra ngoài khung, dùng ảnh tham chiếu "quay xa" (mèo nhỏ 72%, nhiều khoảng trống trên đầu):\n- pounce (vồ), reach_up (với cao), swat (vả khi ngồi), land (rơi xuống tiếp đất nhanh), catch_bite (chụp mồi)\n- eat: mèo đi tới rồi cúi xuống ăn (đứng nguyên)\n- Mỗi clip 1 seed, lưu <tên>.mp4.'),
+  code(`!python /content/video_gen/comfy_batch.py --backend h3local --quality {QUALITY} --variant {MODEL_VARIANT} --out {OUT} --flat --batch fix`),
 
   md('## 9. Nén thành 1 file zip để tải về\nTải kitten_video_h3_fix.zip trong Drive, giải nén vào video_gen/output/fix/ của dự án rồi chạy\npython tools/build_clips.py video_gen/output/fix kitten2/clips'),
   code(`import shutil; print(shutil.make_archive(OUT, "zip", OUT))`),
