@@ -41,7 +41,7 @@ QUALITY = "full"           # "full" | "turbo"
 
 COMFY_ROOT = "/content/ComfyUI"
 DRIVE_MODEL_ROOT = "/content/drive/MyDrive/ComfyUI_H3_models"
-OUT = "/content/drive/MyDrive/kitten_video_h3"     # kết quả mp4 lưu ở đây
+OUT = "/content/drive/MyDrive/kitten_video_h3_v2"  # kết quả: 1 thư mục, mỗi hành động 1 file <tên>.mp4
 
 import os, shutil
 os.makedirs(OUT, exist_ok=True); os.makedirs(DRIVE_MODEL_ROOT, exist_ok=True)
@@ -107,26 +107,27 @@ else:
   code(`!python /content/video_gen/comfy_batch.py --backend h3local --check
 !python /content/video_gen/comfy_batch.py --backend h3local --list`),
 
-  md(`## 7. Chạy thử 1 clip: \`pounce\`
-Xem kết quả ở ô sau rồi mới chạy cả loạt.`),
-  code(`!python /content/video_gen/comfy_batch.py --backend h3local --quality {QUALITY} --variant {MODEL_VARIANT} --out {OUT} --only pounce --keep-frames`),
+  md(`## 7. Chạy thử 1 clip: \`turn_w\` (quay đầu, ngắn nhất)
+Kết quả lưu thẳng \`OUT/turn.mp4\`. Xem ở ô sau rồi mới chạy cả loạt.`),
+  code(`!python /content/video_gen/comfy_batch.py --backend h3local --quality {QUALITY} --variant {MODEL_VARIANT} --out {OUT} --flat --only turn_w`),
   code(`from IPython.display import Video, display
 import glob
-f = sorted(glob.glob(OUT + "/pounce/*.mp4")); print(f)
+f = sorted(glob.glob(OUT + "/*.mp4")); print(f)
 if f: display(Video(f[-1], embed=True, width=720))`),
 
-  md(`## 8. Chạy cả loạt
-- \`--priority 1\`: nhóm ưu tiên 1 (run, crouch_wiggle, pounce, held_dangle, land, pet). Đổi 2 hoặc 3 để chạy thêm.
-- \`--only a,b,c\`: chỉ chạy các clip chỉ định (vd chạy lại clip lỗi).
-- \`--variants 2\`: mỗi clip 2 seed để chọn bản đẹp.
-- Clip nào có mp4 rồi sẽ tự bỏ qua (thêm \`--force\` để chạy lại).`),
-  code(`!python /content/video_gen/comfy_batch.py --backend h3local --quality {QUALITY} --variant {MODEL_VARIANT} --out {OUT} --priority 1 --variants 2 --keep-frames`),
+  md(`## 8. Chạy cả loạt v2 (13 clip)
+- Bản "quay xa" (mèo nhỏ hơn trong khung) của các clip nhảy/vồ/với cao để không bị cắt mép: pounce, reach_up, swat, land, lie_down, belly_roll, belly_return, catch_bite.
+- Hành động mới: walk (đi bộ lặp), run (phi liên tục), turn (quay đầu), eat (ăn bánh), sleep (ngủ lặp).
+- Kết quả: 1 thư mục, mỗi hành động 1 file \`<tên>.mp4\`; \`--variants 2\` thêm bản thứ 2 \`<tên>_b.mp4\`. Không lưu khung hình.
+- Muốn 8 clip quan trọng trước: thêm \`--priority 1\`. Clip có file rồi sẽ tự bỏ qua (\`--force\` để chạy lại).`),
+  code(`!python /content/video_gen/comfy_batch.py --backend h3local --quality {QUALITY} --variant {MODEL_VARIANT} --out {OUT} --flat --batch v2 --variants 2`),
 
-  md(`## 9. Sau khi xong
-Kết quả: \`MyDrive/kitten_video_h3/<id>/<id>_h3local_s<seed>.mp4\` (và thư mục \`*_frames\` PNG không nén).
-Chọn bản đẹp nhất, đổi tên \`<id>.mp4\`, bỏ vào \`Video/\` của dự án, rồi \`bash tools/build_sprites.sh\`.
+  md(`## 9. Nén thành 1 file zip để tải về
+Tải \`kitten_video_h3_v2.zip\` trong Drive, giải nén vào \`video_gen/output/v2/\` của dự án, rồi chạy
+\`python tools/build_clips.py video_gen/output/v2 kitten2/clips\`.`),
+  code(`import shutil; print(shutil.make_archive(OUT, "zip", OUT))`),
 
-Xem log khi lỗi:`),
+  md(`Xem log khi lỗi:`),
   code(`print(open("/content/comfyui.log", errors="ignore").read()[-12000:])`),
 ];
 

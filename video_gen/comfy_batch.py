@@ -53,6 +53,8 @@ def select_clips(cfg, args):
         if unknown:
             sys.exit(f"Không có clip: {', '.join(unknown)}  (dùng --list để xem)")
         clips = [c for c in clips if c["id"] in wanted]
+    if args.batch:
+        clips = [c for c in clips if c.get("batch") == args.batch]
     if args.priority:
         clips = [c for c in clips if c.get("priority", 9) <= args.priority]
     return clips
@@ -155,7 +157,7 @@ def h3_prompt(cfg, clip):
         last,
         "",
         "summary:",
-        f"[First-last-frame motion generation — {clip['id']}] " + clip.get("summary", clip["prompt"]),
+        f"[First-last-frame motion generation — {clip['id']}] " + (clip.get("summary") or clip.get("prompt", "")),
         "",
         "retention_analysis:",
         hp["retention"],
@@ -164,7 +166,7 @@ def h3_prompt(cfg, clip):
         f"[Shot 1 — 0.00-{dur:.2f} s] One uninterrupted static shot. The camera and framing are completely locked.",
         "",
     ]
-    for a, b, text in clip.get("timeline", [[0, dur, clip["prompt"]]]):
+    for a, b, text in (clip.get("timeline") or [[0, dur, clip.get("prompt", "")]]):
         parts.append(f"{a:.2f}-{b:.2f} s — {text}")
     parts += ["", hp["audio"]]
     return "\n".join(parts)
@@ -315,14 +317,18 @@ def frames_to_mp4(frame_files, fps, dest):
 
 
 # --------------------------------------------------------------------------- main
-def run_clip(cfg, clip, backend, seed, comfy, args):
+def run_clip(cfg, clip, backend, seed, comfy, args, v=0):
     refs = cfg["refs"]
     for key in (clip["start"], clip["end"]):
         path = os.path.join(HERE, refs[key]["file"])
         if not os.path.exists(path):
             return f"thiếu ảnh tham chiếu '{key}' ({refs[key]['file']}); xem refs.{key}.generate trong clips.json"
-    out_dir = os.path.join(args.out, clip["id"])
-    dest = os.path.join(out_dir, f"{clip['id']}_{backend}_s{seed}.mp4")
+    if args.flat:   # 1 thư mục, tên file = tên hành động (bản thứ 2 trở đi: _b, _c ...)
+        out_dir = args.out
+        dest = os.path.join(out_dir, clip.get("name", clip["id"]) + ("" if v == 0 else "_" + "bcdefgh"[v - 1]) + ".mp4")
+    else:
+        out_dir = os.path.join(args.out, clip["id"])
+        dest = os.path.join(out_dir, f"{clip['id']}_{backend}_s{seed}.mp4")
     if os.path.exists(dest) and not args.force:
         return f"bỏ qua (đã có {os.path.basename(dest)})"
     os.makedirs(out_dir, exist_ok=True)
@@ -352,7 +358,7 @@ def run_clip(cfg, clip, backend, seed, comfy, args):
                 with open(p, "wb") as f:
                     f.write(comfy.download(it))
                 files.append(p)
-            if args.keep_frames:
+            if args.keep_frames and not args.flat:
                 fdir = os.path.join(out_dir, f"{clip['id']}_{backend}_s{seed}_frames")
                 os.makedirs(fdir, exist_ok=True)
                 for p in files:
@@ -372,6 +378,8 @@ def main():
     ap.add_argument("--variant", choices=["int8", "fp8"], help="ghi đè backends.h3local.variant (A100: int8)")
     ap.add_argument("--only", help="id clip, cách nhau dấu phẩy")
     ap.add_argument("--priority", type=int, help="chỉ chạy clip có priority <= N")
+    ap.add_argument("--batch", help="chỉ chạy clip có \"batch\" này (vd v2)")
+    ap.add_argument("--flat", action="store_true", help="lưu thẳng <out>/<tên hành động>.mp4 (bản 2: _b.mp4), không lưu khung hình")
     ap.add_argument("--variants", type=int, default=1, help="số seed khác nhau cho mỗi clip")
     ap.add_argument("--list", action="store_true")
     ap.add_argument("--dry-run", action="store_true", help="in workflow JSON rồi thoát (không cần server)")
@@ -429,7 +437,7 @@ def main():
             seed = cfg["global"]["seed"] + v
             print(f"[{clip['id']}] backend={args.backend} seed={seed}", flush=True)
             try:
-                msg = run_clip(cfg, clip, args.backend, seed, comfy, args)
+                msg = run_clip(cfg, clip, args.backend, seed, comfy, args, v)
             except Exception as e:  # tiếp tục các clip còn lại
                 msg = f"LỖI: {e}"
             print(f"    {msg}", flush=True)

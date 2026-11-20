@@ -30,3 +30,7 @@ video_gen/refs/_orig/
 
 # Thư mục tạm của dự án khác (notebook CCTV), không đưa lên git
 tmp/
+
+# Bản xem thử v2: clip WebM đã tách nền và âm thanh đã xử lý (sinh bằng tools/build_clips.py, tools/build_sounds.py)
+kitten2/clips/
+kitten2/sounds/

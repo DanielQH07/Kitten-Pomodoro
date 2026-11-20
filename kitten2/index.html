@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#fff3ea">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Kitten Pomodoro v2 — bản xem thử</title>
+<style>
+  *{box-sizing:border-box}
+  :root{--hand:url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'40'%20height%3D'40'%20viewBox%3D'0%200%2040%2040'%3E%3Cg%20transform%3D'rotate(0%2020%2020)'%3E%3Ctext%20x%3D'4'%20y%3D'32'%20font-size%3D'30'%3E%F0%9F%96%90%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fsvg%3E") 14 14;--hand2:url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'40'%20height%3D'40'%20viewBox%3D'0%200%2040%2040'%3E%3Cg%20transform%3D'rotate(-20%2020%2020)'%3E%3Ctext%20x%3D'4'%20y%3D'32'%20font-size%3D'30'%3E%F0%9F%96%90%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fsvg%3E") 14 14}
+  html,body{margin:0;height:100%;overflow:hidden;background:#fff3ea;color:#3b2f2f;font:16px system-ui,sans-serif;touch-action:none;-webkit-tap-highlight-color:transparent;user-select:none}
+  /* ---------- trang Pomodoro ---------- */
+  main{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:10px;padding:7vh 24px 0;text-align:center;
+       background:radial-gradient(1200px 600px at 50% 0,#ffe6d4,#fff3ea 70%)}
+  h1{margin:0;font-size:20px;letter-spacing:.3px}
+  #time{font-size:min(22vw,92px);font-weight:700;letter-spacing:2px;font-variant-numeric:tabular-nums}
+  #phase{color:#a07a6a;margin-top:-6px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center}
+  button{padding:11px 18px;border:0;border-radius:14px;background:#f4a9a0;color:#3b2f2f;font:600 15px system-ui;cursor:pointer;transition:transform .12s,background .12s}
+  button:hover{transform:translateY(-1px);background:#f19a90}
+  button.sec{background:#eadbd3}
+  label{display:flex;gap:8px;align-items:center;font-size:14px;color:#6a564e}
+  input[type=number]{width:56px;padding:5px;font-size:15px;border:1px solid #e3cfc4;border-radius:8px}
+  small{color:#a07a6a;max-width:420px}
+  /* ---------- lớp mèo ---------- */
+  #stage{position:fixed;inset:0;z-index:5;pointer-events:none;overflow:hidden}
+  #stage.shake{animation:shake .28s}
+  @keyframes shake{20%{transform:translate(-5px,3px)}40%{transform:translate(5px,-3px)}60%{transform:translate(-3px,2px)}80%{transform:translate(2px,-1px)}}
+  #dim{position:absolute;inset:0;background:rgba(24,16,34,.66);opacity:0;transition:opacity .9s}
+  #dim.on{opacity:1}
+  #cat{position:fixed;left:0;top:0;width:1344px;height:768px;transform-origin:0 0;will-change:transform;pointer-events:none}
+  .layer{position:absolute;left:0;top:0;width:1344px;height:768px;opacity:0;pointer-events:none}
+  .pose{transform-origin:580px 716px;transform:scaleY(var(--b,1))}
+  /* làm mềm mép khung clip: chỗ mèo vươn ra ngoài khung (vồ, với cao) mờ dần thay vì bị cắt thẳng */
+  video.layer{-webkit-mask-image:linear-gradient(to right,transparent 0,#000 3%,#000 97%,transparent 100%),linear-gradient(to bottom,transparent 0,#000 5%,#000 100%);
+    -webkit-mask-composite:source-in;mask-image:linear-gradient(to right,transparent 0,#000 3%,#000 97%,transparent 100%),linear-gradient(to bottom,transparent 0,#000 5%,#000 100%);mask-composite:intersect}
+  #shadow{position:absolute;border-radius:50%;background:radial-gradient(closest-side,rgba(20,10,0,.55),rgba(20,10,0,0));opacity:0;filter:blur(3px)}
+  #bubble{position:fixed;left:50%;top:7vh;transform:translateX(-50%);text-align:center;color:#fff;font:600 24px/1.4 system-ui,sans-serif;opacity:0;transition:opacity .9s;pointer-events:none;text-shadow:0 2px 10px #0009;z-index:6}
+  #bubble.on{opacity:1}
+  #bubble small{display:block;font:400 15px system-ui;color:#fff;opacity:.9;margin-top:4px}
+  #bubble button{pointer-events:auto;margin-top:12px;padding:8px 18px;background:#ffffffd0;font:600 14px system-ui}
+  /* ---------- hiệu ứng ---------- */
+  .fx{position:fixed;pointer-events:none;z-index:9}
+  .heart{font-size:28px;animation:up 1.4s ease-out forwards;text-shadow:0 2px 6px #0004}
+  @keyframes up{from{opacity:1;transform:translate(0,0) scale(.7)}to{opacity:0;transform:translate(var(--dx),-100px) scale(1.25)}}
+  .dust{border-radius:50%;background:radial-gradient(closest-side,#fffe,#fff0);animation:puff .75s ease-out forwards}
+  @keyframes puff{from{opacity:.9;transform:translate(-50%,-50%) scale(.4)}to{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(1.8)}}
+  .spark{font-size:22px;animation:spark 1s ease-out forwards}
+  @keyframes spark{from{opacity:1;transform:translate(0,0) scale(.5) rotate(0)}to{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1.3) rotate(120deg)}}
+  .zzz{color:#fff;font-weight:700;font-style:italic;text-shadow:0 1px 6px #0007;animation:zz 2.6s ease-out forwards}
+  @keyframes zz{from{opacity:0;transform:translate(0,0) scale(.6)}20%{opacity:1}to{opacity:0;transform:translate(26px,-70px) scale(1.4)}}
+  .trail{width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:#ff3b3b;animation:tr .42s ease-out forwards}
+  @keyframes tr{from{opacity:.5;transform:scale(1)}to{opacity:0;transform:scale(.2)}}
+  /* ---------- đồ chơi ---------- */
+  #laser{position:fixed;left:0;top:0;z-index:12;pointer-events:none;display:none;will-change:transform}
+  #laser::before{content:"";position:absolute;left:-17px;top:-17px;width:34px;height:34px;border-radius:50%;background:radial-gradient(closest-side,#ff5a5a,#ff2a2a66 60%,#ff2a2a00)}
+  #laser::after{content:"";position:absolute;left:-5px;top:-5px;width:10px;height:10px;border-radius:50%;background:#fff;box-shadow:0 0 8px 3px #ff3030}
+  #wand{position:fixed;inset:0;width:100%;height:100%;z-index:12;pointer-events:none;display:none;overflow:visible}
+  body[data-tool=laser],body[data-tool=laser] *:not(.ui *),body[data-tool=feather],body[data-tool=feather] *:not(.ui *){cursor:none}
+  body[data-tool=treat]{cursor:copy}
+  body[data-cur=hand]{cursor:var(--hand),grab}
+  body[data-cur=stroke]{cursor:var(--hand2),grabbing}
+  body[data-cur=point]{cursor:pointer}
+  body.dragging{cursor:grabbing}
+  #mood{position:fixed;left:0;top:0;z-index:11;pointer-events:none;font-size:34px;margin:-20px 0 0 -18px;opacity:0;transition:opacity .25s;filter:drop-shadow(0 2px 4px #0005)}
+  #mood.pop{animation:pop .4s ease-out}
+  @keyframes pop{from{scale:.3}60%{scale:1.25}to{scale:1}}
+  #toast{position:fixed;left:50%;top:24vh;transform:translate(-50%,10px);z-index:22;padding:10px 18px;border-radius:18px;background:#fffffff0;color:#3b2f2f;
+    font:600 16px system-ui;box-shadow:0 6px 24px #0003;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;text-align:center;max-width:90vw}
+  #toast.on{opacity:1;transform:translate(-50%,0)}
+  #bond{position:fixed;left:14px;top:14px;z-index:20;display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:16px;background:#ffffffd9;box-shadow:0 4px 16px #0002;font:600 13px system-ui}
+  #bond .bar{width:90px;height:8px;border-radius:5px;background:#f3e4db;overflow:hidden}
+  #bondBar{height:100%;background:linear-gradient(90deg,#f4a9a0,#ef6f8e);border-radius:5px;transition:width .5s}
+  .treat{position:fixed;left:0;top:0;z-index:7;font-size:34px;pointer-events:none;filter:drop-shadow(0 3px 2px #0004)}
+  /* ---------- thanh công cụ ---------- */
+  .ui{position:fixed;z-index:20;right:14px;top:14px;display:flex;gap:8px;padding:8px 10px;border-radius:22px;
+      background:#ffffffe6;box-shadow:0 6px 24px #0003;backdrop-filter:blur(6px);align-items:center;touch-action:auto}
+  body:not(.blocking) .ui{opacity:.92}
+  .ui button{padding:9px 14px;border-radius:14px;background:#f3e4db;font-size:14px}
+  .ui button.on{background:#f4a9a0;box-shadow:inset 0 0 0 2px #e07f74}
+  .ui .sep{width:1px;height:26px;background:#e3cfc4;margin:0 4px}
+  .ui label{font-size:13px}
+  .ui input[type=range]{width:90px}
+  .hint{position:fixed;z-index:20;left:50%;bottom:14px;transform:translateX(-50%);font-size:13px;color:#fff;text-shadow:0 1px 6px #000a;opacity:0;transition:opacity .6s;pointer-events:none;white-space:nowrap}
+  body.blocking .hint{opacity:.9}
+  #loading{position:fixed;top:8px;left:12px;z-index:30;font-size:13px;color:#a07a6a}
+  #dbg{position:fixed;top:8px;right:12px;z-index:30;font:12px monospace;color:#fff;background:#0007;padding:2px 6px;border-radius:6px}
+  #dbg:empty{display:none}
+  #credit{position:fixed;right:14px;top:70px;z-index:21;font-size:11px;color:#a07a6a;opacity:.8}
+  body.blocking #credit{color:#fff}
+  @media(max-width:700px){main{padding-top:96px}#bubble{top:92px;font-size:19px;width:92vw}#toast{top:30vh}#bond{top:auto;bottom:10px;left:10px}.ui{left:50%;right:auto;transform:translateX(-50%);top:8px}#credit{display:none}.ui button{font-size:13px}.ui label{display:none}.ui{gap:4px;padding:6px}.ui button{padding:8px 9px}.ui input[type=range]{width:60px}.hint{display:none}}
+</style>
+</head>
+<body>
+<main>
+  <h1>🐱 Kitten Pomodoro</h1>
+  <div id="time">--:--</div>
+  <div id="phase"></div>
+  <div class="row"><button id="start">Bắt đầu làm việc</button><button id="stop" class="sec">Dừng</button><button id="test" class="sec">Thử giờ nghỉ ngay</button></div>
+  <div class="row">
+    <label>Làm <input id="workMin" type="number" min="1" max="120"> phút</label>
+    <label>Nghỉ <input id="breakMin" type="number" min="1" max="60"> phút</label>
+  </div>
+  <small>Hết giờ làm, mèo chạy vào giữa màn hình, chặn mọi thứ để bạn nghỉ và chơi với mèo. Hết giờ nghỉ mèo tự đi ra.</small>
+</main>
+
+<div id="stage">
+  <div id="dim"></div>
+  <div id="shadow"></div>
+  <div id="cat"></div>
+</div>
+<div id="laser"></div>
+<svg id="wand"></svg>
+<div id="mood"></div>
+<div id="toast"></div>
+<div id="bond" title="Độ thân thiết: xoa đầu, chơi, cho ăn để tăng">❤ <span id="bondLv">Lv 1</span><div class="bar"><div id="bondBar"></div></div></div>
+<div id="bubble"><div>Nghỉ ngơi một chút nhé 🐾</div><small id="sub"></small><button id="skip">Cho mèo đi (bỏ qua giờ nghỉ)</button></div>
+<div class="hint" id="hint">Vuốt đầu để xoa · kéo thân để xách lên · chạm đuôi mèo sẽ cào · mèo nằm thì chạm bụng · phím 1–4 đổi công cụ</div>
+
+<div class="ui">
+  <button data-tool="hand" class="on" title="phím 1">🖐 Bàn tay</button>
+  <button data-tool="laser" title="phím 2">🔴 Laser</button>
+  <button data-tool="feather" title="phím 3">🪶 Cần câu</button>
+  <button data-tool="treat" title="phím 4: chạm xuống sàn để thả bánh">🐟 Bánh <b id="treatN">3</b></button>
+  <span class="sep"></span>
+  <label>🔊 <input id="volume" type="range" min="0" max="1" step="0.05"></label>
+  <button id="music" class="sec" title="nhạc nền khi nghỉ">♪</button>
+</div>
+<div id="credit">Nhạc: Lukrembo – Bread (freetouse.com) · Lông: Twemoji (CC-BY 4.0)</div>
+<div id="loading">Đang tải clip…</div>
+<div id="dbg"></div>
+
+<script>
+// Pomodoro tối giản (localStorage) cho bản xem thử
+(() => {
+  const KEY = 'kitten2-state', D = { phase: 'idle', endsAt: 0, workMin: 25, breakMin: 5, catOn: true, volume: 0.6, music: true };
+  let data; try { data = { ...D, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch (e) { data = { ...D }; }
+  const q = new URLSearchParams(location.search), ls = [];
+  if (q.has('break')) { data.phase = 'break'; data.endsAt = Date.now() + 5 * 60000; }
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {} };
+  const set = (o) => { Object.assign(data, o); save(); ls.forEach((f) => f({ ...data })); };
+  const phase = (p) => set({ phase: p, endsAt: Date.now() + (p === 'work' ? data.workMin : data.breakMin) * 60000 });
+  window.KS = { get: () => ({ ...data }), on: (f) => ls.push(f), set, skipBreak: () => phase('work') };
+  const $ = (s) => document.querySelector(s);
+  for (const k of ['workMin', 'breakMin']) { $('#' + k).value = data[k]; $('#' + k).onchange = () => set({ [k]: Number($('#' + k).value) }); }
+  $('#volume').value = data.volume; $('#volume').oninput = () => set({ volume: Number($('#volume').value) });
+  const mus = () => { $('#music').classList.toggle('sec', !data.music); $('#music').style.opacity = data.music ? 1 : .5; };
+  $('#music').onclick = () => { set({ music: !data.music }); mus(); }; mus();
+  $('#start').onclick = () => phase('work'); $('#stop').onclick = () => set({ phase: 'idle', endsAt: 0 }); $('#test').onclick = () => phase('break');
+  setInterval(() => {
+    const left = Math.max(0, data.endsAt - Date.now());
+    $('#time').textContent = data.phase === 'idle' ? '--:--' : String(Math.floor(left / 60000)).padStart(2, '0') + ':' + String(Math.floor(left / 1000) % 60).padStart(2, '0');
+    $('#phase').textContent = { idle: 'Đang rảnh', work: 'Đang làm việc', break: 'Đang nghỉ với mèo' }[data.phase];
+    if (data.phase !== 'idle' && left === 0) phase(data.phase === 'work' ? 'break' : 'work');
+  }, 300);
+  if (q.get('tool')) addEventListener('load', () => document.querySelector(`[data-tool="${q.get('tool')}"]`).click());
+})();
+</script>
+<script src="engine.js"></script>
+</body>
+</html>
